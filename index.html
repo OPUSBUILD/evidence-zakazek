@@ -247,6 +247,9 @@ tr.row-urgent-red > td{background:#fff0f0!important;border-left:3px solid #dc262
 tr.row-urgent-red:hover > td{background:#ffe4e4!important}
 tr.row-urgent-orange > td{background:#fff8f0!important;border-left:3px solid #f97316}
 tr.row-urgent-orange:hover > td{background:#ffedd5!important}
+@keyframes rowPulse{0%{background:#fef08a}50%{background:#fde047}100%{background:#fef9c3}}
+tr.row-last-edited > td{background:#fef9c3!important;border-left:4px solid #f59e0b!important;animation:rowPulse 1s ease-in-out 3}
+tr.row-last-edited:hover > td{background:#fef08a!important}
 
 /* === TERMIN ALERT BANNER === */
 #termin-alert{display:none;background:#fff0f0;border-bottom:3px solid #dc2626;padding:10px 24px;align-items:center;justify-content:space-between;gap:12px}
@@ -898,6 +901,8 @@ function zkontrolujPrihlaseni() {
 }
 let currentTab = 'pozadavky';
 let editIndex = null;
+let lastEditedIdx = null;
+let lastEditedTab = null;
 let activeStatFilter = null;
 let stornoIdx = null;
 let sortCol = '';
@@ -1197,7 +1202,7 @@ function renderTable() {
       ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th>${thSort('stav','STAV')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
-      return `<tr class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
+      return `<tr data-idx="${idx}" class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
         <td style="color:#888;font-size:11px">${i+1}</td>
         <td style="font-weight:600;color:#1f3864">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
@@ -1248,7 +1253,7 @@ function renderTable() {
       ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena dle CN</th><th style="width:110px">Skutečná fakturace</th>${thSort('stav','STAV')}<th>Faktura OPUS</th><th style="min-width:180px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
-      return `<tr class="${i%2===0?'row-even':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}">
+      return `<tr data-idx="${idx}" class="${i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}">
         <td style="color:#888;font-size:11px">${i+1}</td>
         <td style="font-weight:600;color:#375623">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
@@ -1450,6 +1455,20 @@ function zobrazitDetail(idx) {
   }, 100);
 }
 
+function zvyraznitPosledniRadek() {
+  if (lastEditedIdx === null) return;
+  setTimeout(() => {
+    // Odstraň předchozí zvýraznění
+    document.querySelectorAll('tr.row-last-edited').forEach(r => r.classList.remove('row-last-edited'));
+    // Najdi řádek podle data-idx atributu
+    const radek = document.querySelector(`tr[data-idx="${lastEditedIdx}"]`);
+    if (radek) {
+      radek.classList.add('row-last-edited');
+      radek.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 100);
+}
+
 function closeModal() {
   if (editIndex !== null && modalZmeneno) {
     showConfirm(
@@ -1464,7 +1483,11 @@ function closeModal() {
   editIndex=null;
   modalZmeneno=false;
 }
-function editZakazka(idx) { openModal(idx); }
+function editZakazka(idx) {
+  lastEditedIdx = idx;
+  lastEditedTab = currentTab;
+  openModal(idx);
+}
 
 function saveZakazka() {
   const z = {
@@ -1500,7 +1523,7 @@ function saveZakazka() {
     showConfirm(
       '💾 Uložit změny?',
       `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
-      () => { z.id=orig.id; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); }
+      () => { z.id=orig.id; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
     );
   } else {
     data.pozadavky.push(z);
