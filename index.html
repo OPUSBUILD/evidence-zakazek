@@ -634,6 +634,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+// Přihlášení platí jen do zavření prohlížeče
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
 // === MAPOVÁNÍ E-MAILŮ NA ROLE ===
 const EMAIL_ROLE_MAP = {
@@ -1058,7 +1060,7 @@ function renderTable() {
   if (currentTab==='pozadavky') {
     document.getElementById('table-container').innerHTML = `<table><thead><tr>
       <th>#</th>${thSort('pozadavek','Požadavek')}${thSort('datum','Ze dne')}<th class="sortable${sortCol==='objednavka'?(sortDir===1?' sort-asc':' sort-desc'):''}" onclick="setSort('objednavka')" style="width:120px;white-space:nowrap">Č. objednávky</th>${thSort('adresa','Adresa')}${thSort('typ','Typ')}<th>Byt</th>
-      ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th><th style="width:110px">Fakt. částka</th>${thSort('stav','STAV')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
+      ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th>${thSort('stav','STAV')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
       return `<tr class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer" title="${aktualniRole!=='technik'?'Klikni pro editaci':'Klikni pro detail'}">
@@ -1073,7 +1075,7 @@ function renderTable() {
         <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="has-tooltip" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;cursor:help">${(z.popis||'').substring(0,40)}${z.popis&&z.popis.length>40?'…':''}<span class="tooltip-text">${(z.popis||'(bez popisu)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></span></td>
         <td style="white-space:nowrap">${z.technik||''}</td>
         <td style="text-align:right;font-weight:600;white-space:nowrap;color:#555;width:110px;font-size:12px">${z.castka||''}</td>
-        <td style="text-align:right;font-weight:700;white-space:nowrap;color:#16a34a;width:110px;font-size:12px">${z.castka_fak||''}</td>
+
         <td><select class="stav-select ${getStavClass(z.stav)}" onchange="zmenStav(${idx},this.value)" ${aktualniRole==='technik'?'disabled style="border:none;border-radius:20px;font-size:11px;font-weight:600;padding:4px 8px;outline:none;pointer-events:none"':'style="border:none;border-radius:20px;font-size:11px;font-weight:600;padding:4px 8px;cursor:pointer;outline:none"'}>
           <option value="Nacenit" ${z.stav==='Nacenit'?'selected':''}>Nacenit</option>
           <option value="Prohlídka" ${z.stav==='Prohlídka'?'selected':''}>Prohlídka</option>
@@ -1098,10 +1100,10 @@ function renderTable() {
         </td>
         <td class="has-tooltip" style="font-size:12px;color:#555;min-width:180px;max-width:260px">${(z.poznamky||'').substring(0,55)}${z.poznamky&&z.poznamky.length>55?'…':''}<span class="tooltip-text">${(z.poznamky||'(žádné poznámky)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
         <td class="has-tooltip" style="font-size:12px;color:#555;min-width:160px;max-width:220px">${(z.kontakty||'').substring(0,45)}${z.kontakty&&z.kontakty.length>45?'…':''}<span class="tooltip-text">${(z.kontakty||'(žádné kontakty)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
-        <td><div class="row-actions">
-          ${aktualniRole!=='technik'?`<button class="btn btn-primary btn-sm" onclick="editZakazka(${idx})" title="Upravit">✏️</button>`:''}
-          ${aktualniRole!=='technik'?`<button class="btn btn-protokol btn-sm" onclick="otevritProtokol(${idx})" title="Protokol+Faktura">📄</button>`:''}
-          ${aktualniRole!=='technik'?`<button class="btn btn-success btn-sm" onclick="vyfakturovat(${idx})" title="Přesunout na Vyfakturované">✅</button><button class="btn btn-sm" style="background:#991b1b;color:white" onclick="stornovat(${idx})" title="Stornovat">❌</button><button class="btn btn-danger btn-sm" onclick="deleteZakazka(${idx})" title="Smazat">🗑️</button>`:''}
+        <td style="white-space:nowrap"><div class="row-actions" style="flex-wrap:nowrap;gap:2px">
+          ${aktualniRole!=='technik'?`<button class="btn btn-primary btn-sm" onclick="editZakazka(${idx})" title="Upravit" style="padding:3px 6px;font-size:11px">✏️</button>`:''}
+          ${aktualniRole!=='technik'?`<button class="btn btn-protokol btn-sm" onclick="otevritProtokol(${idx})" title="Protokol" style="padding:3px 6px;font-size:11px">📄</button>`:''}
+          ${aktualniRole!=='technik'?`<button class="btn btn-success btn-sm" onclick="vyfakturovat(${idx})" title="Vyfakturovat" style="padding:3px 6px;font-size:11px">✅</button><button class="btn btn-sm" style="background:#991b1b;color:white;padding:3px 6px;font-size:11px" onclick="stornovat(${idx})" title="Stornovat">❌</button><button class="btn btn-danger btn-sm" onclick="deleteZakazka(${idx})" title="Smazat" style="padding:3px 6px;font-size:11px">🗑️</button>`:''}
         </div></td></tr>`;}).join('')}</tbody></table>`;
   } else if (currentTab==='vyfakturovane') {
     const totalFak = rows.reduce((s,z)=>s+parseCastka(z.castka_fak),0);
@@ -2528,34 +2530,35 @@ document.addEventListener('mousedown', function(e) {
   if (e.button === 3) e.preventDefault();
 });
 
-// Dynamické pozicování tooltipu
+// Tooltip sleduje myš
+document.addEventListener('mousemove', function(e) {
+  const el = e.target.closest('.has-tooltip');
+  if (!el) return;
+  const tip = el.querySelector('.tooltip-text');
+  if (!tip) return;
+  const tipW = 380;
+  const tipH = tip.offsetHeight || 150;
+  let left = e.clientX + 14;
+  let top = e.clientY + 14;
+  if (left + tipW > window.innerWidth - 10) left = e.clientX - tipW - 14;
+  if (top + tipH > window.innerHeight - 10) top = e.clientY - tipH - 14;
+  if (left < 10) left = 10;
+  if (top < 10) top = 10;
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+});
 document.addEventListener('mouseover', function(e) {
   const el = e.target.closest('.has-tooltip');
   if (!el) return;
   const tip = el.querySelector('.tooltip-text');
   if (!tip) return;
-  const rect = el.getBoundingClientRect();
-  const tipW = 380;
-  const tipH = 200;
-  // Horizontální pozice
-  let left = rect.left;
-  if (left + tipW > window.innerWidth - 10) left = window.innerWidth - tipW - 10;
-  if (left < 10) left = 10;
-  // Vertikální pozice - nad nebo pod
-  let top;
-  if (rect.top > tipH + 20) {
-    top = rect.top - tipH - 8;
-  } else {
-    top = rect.bottom + 8;
-  }
-  tip.style.left = left + 'px';
-  tip.style.top = top + 'px';
   tip.style.visibility = 'visible';
   tip.style.opacity = '1';
 });
 document.addEventListener('mouseout', function(e) {
   const el = e.target.closest('.has-tooltip');
   if (!el) return;
+  if (el.contains(e.relatedTarget)) return;
   const tip = el.querySelector('.tooltip-text');
   if (!tip) return;
   tip.style.visibility = 'hidden';
