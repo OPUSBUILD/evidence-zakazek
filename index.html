@@ -248,6 +248,8 @@ tr.row-urgent-red:hover > td{background:#ffe4e4!important}
 tr.row-urgent-orange > td{background:#fff8f0!important;border-left:3px solid #f97316}
 tr.row-urgent-orange:hover > td{background:#ffedd5!important}
 @keyframes rowPulse{0%{background:#fef08a}50%{background:#fde047}100%{background:#fef9c3}}
+tr.row-selected > td{background:#dbeafe!important;border-left:4px solid #2563eb!important;outline:none}
+tr.row-selected:hover > td{background:#bfdbfe!important}
 tr.row-last-edited > td{background:#fef9c3!important;border-left:4px solid #f59e0b!important;animation:rowPulse 1s ease-in-out 3}
 tr.row-last-edited:hover > td{background:#fef08a!important}
 
@@ -903,6 +905,7 @@ let currentTab = 'pozadavky';
 let editIndex = null;
 let lastEditedIdx = null;
 let lastEditedTab = null;
+let selectedIdx = null;
 let activeStatFilter = null;
 let stornoIdx = null;
 let sortCol = '';
@@ -1108,6 +1111,8 @@ function clickStat(filter, tab, idx) {
 
 function switchTab(tab, el) {
   currentTab=tab; activeStatFilter=null;
+  selectedIdx = null;
+  document.querySelectorAll('tr.row-selected').forEach(r => r.classList.remove('row-selected'));
   currentView='table';
   document.getElementById('filter-stav').value='';
   document.getElementById('filter-technik').value='';
@@ -1202,7 +1207,7 @@ function renderTable() {
       ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th>${thSort('stav','STAV')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
-      return `<tr data-idx="${idx}" class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
+      return `<tr data-idx="${idx}" class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):vyberRadek(${idx})}" ondblclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
         <td style="color:#888;font-size:11px">${i+1}</td>
         <td style="font-weight:600;color:#1f3864">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
@@ -1253,7 +1258,7 @@ function renderTable() {
       ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena dle CN</th><th style="width:110px">Skutečná fakturace</th>${thSort('stav','STAV')}<th>Faktura OPUS</th><th style="min-width:180px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
-      return `<tr data-idx="${idx}" class="${i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}">
+      return `<tr data-idx="${idx}" class="${i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))vyberRadek(${idx})" ondblclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}">
         <td style="color:#888;font-size:11px">${i+1}</td>
         <td style="font-weight:600;color:#375623">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
@@ -1483,9 +1488,19 @@ function closeModal() {
   editIndex=null;
   modalZmeneno=false;
 }
+function vyberRadek(idx) {
+  selectedIdx = idx;
+  // Odstraň předchozí výběr
+  document.querySelectorAll('tr.row-selected').forEach(r => r.classList.remove('row-selected'));
+  // Přidej výběr novému řádku
+  const radek = document.querySelector(`tr[data-idx="${idx}"]`);
+  if (radek) radek.classList.add('row-selected');
+}
+
 function editZakazka(idx) {
   lastEditedIdx = idx;
   lastEditedTab = currentTab;
+  selectedIdx = idx;
   openModal(idx);
 }
 
@@ -2083,7 +2098,40 @@ function ukazPripominku(zprava) {
   b.style.display='flex';
 }
 
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeModal();closeConfirm();closeProtokol();closeStornoModal();} });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeConfirm(); closeProtokol(); closeStornoModal(); return; }
+
+  // Nereaguj pokud je fokus na textovém poli nebo je otevřený modal
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.contentEditable === 'true') return;
+  const modalOpen = document.getElementById('modal').classList.contains('open');
+  if (modalOpen) return;
+
+  const source = currentTab === 'pozadavky' ? data.pozadavky : currentTab === 'vyfakturovane' ? data.vyfakturovane : null;
+  if (!source) return;
+
+  // Enter → otevři editaci vybraného řádku
+  if (e.key === 'Enter' && selectedIdx !== null) {
+    e.preventDefault();
+    editZakazka(selectedIdx);
+    return;
+  }
+
+  // Šipky → pohyb výběru
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    let newIdx;
+    if (selectedIdx === null) {
+      newIdx = e.key === 'ArrowDown' ? 0 : source.length - 1;
+    } else {
+      newIdx = e.key === 'ArrowDown' ? Math.min(selectedIdx + 1, source.length - 1) : Math.max(selectedIdx - 1, 0);
+    }
+    vyberRadek(newIdx);
+    // Scrollni na vybraný řádek
+    const radek = document.querySelector(`tr[data-idx="${newIdx}"]`);
+    if (radek) radek.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
 // Zavírání modalu kliknutím mimo - kontrola mousedown i mouseup aby se nezavřel při tažení textu
 let modalMousedownTarget = null;
 document.getElementById('modal').addEventListener('mousedown', e => { modalMousedownTarget = e.target; });
