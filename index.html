@@ -698,7 +698,7 @@ body.prihlasen #main-obsah { display: block; }
       <!-- Loading -->
       <div class="ai-loading" id="ai-loading">
         <div class="spinner"></div>
-        <p>🤖 AI analyzuje dokument...</p>
+        <p>🔍 Analyzuji dokument...</p>
       </div>
 
       <!-- Error -->
@@ -718,7 +718,7 @@ body.prihlasen #main-obsah { display: block; }
     </div>
     <div class="ai-modal-footer">
       <button class="btn btn-gray" onclick="closeAiImport()">Zrušit</button>
-      <button class="btn" id="ai-extract-btn" onclick="aiExtract()" style="background:#7c3aed;color:white">🤖 Extrahovat data</button>
+      <button class="btn" id="ai-extract-btn" onclick="aiExtract()" style="background:#7c3aed;color:white">🔍 Extrahovat data</button>
       <button class="btn btn-success" id="ai-confirm-btn" onclick="aiConfirm()" style="display:none">✅ Použít data → otevřít zakázku</button>
     </div>
   </div>
@@ -2821,64 +2821,192 @@ async function aiExtract() {
   document.getElementById('ai-confirm-btn').style.display = 'none';
   document.getElementById('ai-match-list').style.display = 'none';
 
-  let systemPrompt, userPrompt;
-
-  if (aiImportMode === 'pozadavek') {
-    systemPrompt = `Jsi asistent pro extrakci dat z požadavků MČ Brno-Líšeň pro firmu OPUS BUILD.
-Odpovídej POUZE platným JSON objektem, bez jakéhokoliv dalšího textu, vysvětlení nebo markdown.
-Extrahuj přesně tato pole:
-{
-  "cislo_pozadavku": "číslo požadavku jako string (např. 13258)",
-  "datum": "datum požadavku ve formátu YYYY-MM-DD nebo prázdný string",
-  "adresa": "místo plnění / adresa objektu",
-  "popis": "popis práce nebo požadavku",
-  "technik": "jméno osoby u pole Vyřizuje nebo Pořídil",
-  "kontakty": "telefon a/nebo email z dokumentu",
-  "priorita": "hodnota priority nebo prázdný string"
-}`;
-    userPrompt = `Extrahuj data z tohoto požadavku:\n\n${text}`;
-  } else {
-    systemPrompt = `Jsi asistent pro extrakci dat z objednávek MČ Brno-Líšeň pro firmu OPUS BUILD.
-Odpovídej POUZE platným JSON objektem, bez jakéhokoliv dalšího textu, vysvětlení nebo markdown.
-Extrahuj přesně tato pole:
-{
-  "cislo_objednavky": "číslo objednávky jako string (např. 10-2026-394)",
-  "datum_obj": "datum objednávky ve formátu YYYY-MM-DD nebo prázdný string",
-  "adresa": "adresa místa plnění",
-  "castka": "cena díla jako číslo BEZ mezer a Kč (např. 270000.00)",
-  "termin": "požadovaný termín předání díla ve formátu YYYY-MM-DD nebo prázdný string",
-  "popis": "popis předmětu objednávky / co se objednává",
-  "druh": "druh činnosti (např. Opravy - velké)",
-  "vyrizuje": "jméno osoby u Vyřizuje"
-}`;
-    userPrompt = `Extrahuj data z této objednávky:\n\n${text}`;
-  }
-
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    });
-    const result = await response.json();
-    const raw = result.content && result.content[0] && result.content[0].text;
-    if (!raw) throw new Error('Prázdná odpověď od AI.');
-
-    // Parse JSON - strip possible markdown
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    let parsed;
+    if (aiImportMode === 'pozadavek') {
+      parsed = parsePozadavek(text);
+    } else {
+      parsed = parseObjednavka(text);
+    }
     aiExtractedData = parsed;
     aiShowLoading(false);
     aiShowPreview(parsed);
   } catch (err) {
     aiShowLoading(false);
-    aiShowError('Chyba při extrakci: ' + (err.message || 'Neznámá chyba. Zkuste znovu.'));
+    aiShowError('Chyba při extrakci: ' + (err.message || 'Neznámá chyba.'));
   }
+}
+
+// ============================================================
+// === REGEX PARSER — POŽADAVEK ===
+// ============================================================
+function parsePozadavek(text) {
+  const get = (patterns) => {
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m && m[1] && m[1].trim()) return m[1].trim();
+    }
+    return '';
+  };
+
+  // Číslo požadavku: "Požadavek č. 13258" nebo "požadavek č. 11715"
+  const cislo = get([
+    /[Pp]ožadavek\s+č[\.\s]+(\d{4,6})/,
+    /Helpdesk\s*-\s*požadavek\s+č[\.\s]+(\d{4,6})/i,
+    /požadavek\s+č[\.\s]*(\d{4,6})/i,
+  ]);
+
+  // Datum: "ze dne 18.03.2026" nebo "18.03.2026"
+  const datumRaw = get([
+    /ze\s+dne\s+(\d{1,2}[.\-]\d{1,2}[.\-]\d{4})/i,
+    /[iI][dD][eE][sS]\s+(\d{1,2}[.\-]\d{1,2}[.\-]\d{4})/,
+    /(\d{1,2}\.\d{2}\.\d{4})/,
+  ]);
+  const datum = parseDatumCZ(datumRaw);
+
+  // Místo plnění / adresa
+  const adresa = get([
+    /[Mm]ísto\s+plnění\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽa-záčďéěíňóřšťúůýž\s]+\d+(?:\/\d+)?)/,
+    /[Mm]ísto\s+plnění\s*[\:\s]+([^\n\r]+)/,
+    /MÍSTO\s+PLNĚNÍ\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][^\n\r]+)/,
+  ]);
+
+  // Vyřizuje (technik)
+  const technik = get([
+    /[Vv]yřizuje\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+)/,
+    /[Vv]yřizuje\s*[\:\s]+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][^\n\r]{3,30})/,
+  ]);
+
+  // Telefon
+  const telefon = get([
+    /[Tt]elefon\s+(\d[\d\s]{8,14})/,
+    /[Tt]el[\.\:]?\s*(\d[\d\s]{8,14})/,
+  ]);
+
+  // Priorita
+  const priorita = get([
+    /[Pp]riorita\s+([^\n\r\t]{1,20})/,
+  ]);
+
+  // Popis — vše po hlavičce tabulky, před "Poznámka"
+  let popis = '';
+  // Zkusíme najít nadpis požadavku (tučný text po tabulce)
+  const popisMatch = text.match(/(?:Priorita[^\n]*\n+|Vyřizuje[^\n]*\n+)([^\n]{10,200})\n/i)
+    || text.match(/(?:\d{9,11}\s+)([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][^\n]{10,200})\n/);
+  if (popisMatch) popis = popisMatch[1].trim();
+
+  // Fallback popis — hledáme první smysluplnou větu po adrese
+  if (!popis) {
+    const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(l => l.length > 15);
+    for (const line of lines) {
+      if (line.match(/[Vv]ýmalba|[Oo]prava|[Vv]ýměna|[Zz]atékání|[Pp]orucha|[Zz]ávada|[Nn]átěr|[Dd]emontáž|[Rr]eklamace/)) {
+        popis = line; break;
+      }
+    }
+  }
+
+  return {
+    cislo_pozadavku: cislo,
+    datum: datum,
+    adresa: adresa,
+    popis: popis,
+    technik: technik,
+    kontakty: telefon ? 'Tel: ' + telefon.replace(/\s/g,'') : '',
+    priorita: priorita && priorita !== 'Žádná' ? priorita : '',
+  };
+}
+
+// ============================================================
+// === REGEX PARSER — OBJEDNÁVKA ===
+// ============================================================
+function parseObjednavka(text) {
+  const get = (patterns) => {
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m && m[1] && m[1].trim()) return m[1].trim();
+    }
+    return '';
+  };
+
+  // Číslo objednávky: "Objednávka č: 10-2026-394"
+  const cislo = get([
+    /[Oo]bjednávka\s+č[\:\.\s]+(\d{2}-\d{4}-\d{2,4})/,
+    /[Oo]bjednávka\s+č[\:\.\s]+([\d\-]+)/,
+    /(\d{2}-\d{4}-\d{2,4})/,
+  ]);
+
+  // Datum objednávky — hledáme datum u podpisu
+  const datumRaw = get([
+    /V\s+Brně\s+dne\s+(\d{1,2}[.\-]\d{1,2}[.\-]\d{2,4})/i,
+    /dne\s+(\d{1,2}[.\-]\d{1,2}[.\-]\d{2,4})/i,
+    /(\d{1,2}\.\s*\d{1,2}\.\s*\d{4})/,
+  ]);
+  const datum_obj = parseDatumCZ(datumRaw);
+
+  // Adresa — první položka v tabulce pod hlavičkou
+  const adresa = get([
+    /([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][A-Za-záčďéěíňóřšťúůýž]+\s+\d+(?:\/\d+)?)\s+[Oo]pravy/,
+    /([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][A-Za-záčďéěíňóřšťúůýž]+\s+\d+(?:\/\d+)?)\s+(?:BYT|VO|SCHOD|MAL|PB|REŽ)/i,
+    /Adresa\s+[^\n]+\n\s*([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][^\n]{4,40})\s+[Oo]pravy/,
+  ]);
+
+  // Termín: "Požadovaný termín předání díla: 31.05.2026"
+  const terminRaw = get([
+    /[Pp]ožadovaný\s+termín\s+předání\s+díla[:\s]+(\d{1,2}[.\-]\d{1,2}[.\-]\d{2,4})/,
+    /[Tt]ermín\s+předání[:\s]+(\d{1,2}[.\-]\d{1,2}[.\-]\d{2,4})/,
+  ]);
+  const termin = parseDatumCZ(terminRaw);
+
+  // Druh činnosti
+  const druh = get([
+    /[Oo]pravy\s*[-–]\s*([^\n\r]{3,30})/,
+    /[Dd]ruh\s+činnosti\s*[\:\s]+([^\n\r]{3,40})/,
+  ]);
+
+  // Popis — z pole Položka
+  const popis = get([
+    /[Pp]oložka\s+([^\n]{10,300})/,
+    /objednáváme[^\n]*\n([^\n]{10,200})/i,
+    /objednáváme\s+u\s+[Vv]ás\s+([^\n]{10,200})/i,
+  ]);
+
+  // Vyřizuje
+  const vyrizuje = get([
+    /[Vv]yřizuje[:\s]+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+)/,
+  ]);
+
+  // Cena — jen pro zobrazení v preview (nevyplňuje se)
+  const castkaRaw = get([
+    /(\d[\d\s]{2,10}[,\.]\d{2})\s*(?:Kč|$)/,
+    /(\d[\d\s]{2,10})\s*Kč/,
+  ]);
+  const castka = castkaRaw ? castkaRaw.replace(/\s/g,'').replace(',','.') : '';
+
+  return {
+    cislo_objednavky: cislo,
+    datum_obj: datum_obj,
+    adresa: adresa,
+    termin: termin,
+    druh: druh ? 'Opravy - ' + druh : '',
+    popis: popis,
+    vyrizuje: vyrizuje,
+    castka: castka,
+  };
+}
+
+// ============================================================
+// === POMOCNÁ FUNKCE — převod data CZ na YYYY-MM-DD ===
+// ============================================================
+function parseDatumCZ(str) {
+  if (!str) return '';
+  // Odstraníme mezery kolem teček
+  const s = str.replace(/\s/g,'');
+  // DD.MM.YYYY nebo D.M.YYYY
+  const m = s.match(/(\d{1,2})[.\-](\d{1,2})[.\-](\d{2,4})/);
+  if (!m) return '';
+  let [, d, mo, y] = m;
+  if (y.length === 2) y = '20' + y;
+  return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
 }
 
 function aiShowPreview(d) {
