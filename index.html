@@ -541,8 +541,8 @@ body.prihlasen #main-obsah { display: block; }
    <div class="form-group"><label>Rozdíl CN vs. faktura</label>
     <div id="f-rozdil-info" style="padding:8px 10px;border-radius:8px;font-size:13px;font-weight:600;background:#f3f4f6;color:#888">–</div>
    </div>
-   <div class="form-section" id="drive-section-header" style="${aktualniRole==='technik'?'display:none':''}">📁 Google Drive</div>
-   <div class="form-group full" id="drive-section-body" style="${aktualniRole==='technik'?'display:none':''}">
+   <div class="form-section" id="drive-section-header">📁 Google Drive</div>
+   <div class="form-group full" id="drive-section-body">
      <label>Odkaz na složku zakázky (Google Drive)</label>
      <div style="display:flex;gap:8px;align-items:center">
        <input id="f-drive-url" placeholder="Vložte odkaz na sdílenou složku z Google Drive..." style="flex:1" oninput="updateDrivePreview()">
@@ -1341,6 +1341,17 @@ function obnovitZakazku(idx) {
 function openModal(idx=null) {
   editIndex=idx;
   document.getElementById('modal').classList.add('open');
+  // Vždy povolit všechna pole (mohla být zakázána z zobrazitDetail)
+  document.querySelectorAll('#modal input, #modal select, #modal textarea').forEach(el => {
+    el.disabled = false;
+    el.style.background = '';
+    el.style.cursor = '';
+  });
+  // Tlačítko Uložit vždy zobrazit
+  const btnUlozit = document.querySelector('#modal .modal-footer .btn-primary');
+  if (btnUlozit) btnUlozit.style.display = '';
+  const btnZrusit = document.querySelector('#modal .modal-footer .btn-gray');
+  if (btnZrusit) btnZrusit.textContent = 'Zrušit';
   if (idx!==null) {
     const source=currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
     const z=source[idx];
