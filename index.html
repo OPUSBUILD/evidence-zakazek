@@ -503,10 +503,16 @@ body.prihlasen #main-obsah { display: block; }
   <h2 id="modal-title">＋ Nová zakázka</h2>
   <div class="form-grid">
    <div class="form-section">📋 Identifikace zakázky</div>
-   <div class="form-group"><label>Požadavek č.</label><input id="f-pozadavek" placeholder="např. 13126"></div>
+   <div class="form-group"><label>Požadavek č.</label>
+     <input id="f-pozadavek" placeholder="např. 13126" onblur="checkDuplicitaPozadavek(this)">
+     <div id="f-pozadavek-warn" style="display:none;font-size:11px;color:#dc2626;margin-top:3px;font-weight:600"></div>
+   </div>
    <div class="form-group"><label>Ze dne</label><input id="f-datum" type="date"></div>
    <div class="form-group"><label>Datum zadání do systému</label><input id="f-datum-zadani" type="date"></div>
-   <div class="form-group"><label>Objednávka č.</label><input id="f-objednavka" placeholder="např. 10-2026-297"></div>
+   <div class="form-group"><label>Objednávka č.</label>
+     <input id="f-objednavka" placeholder="např. 10-2026-297" onblur="checkDuplicitaObjednavka(this)">
+     <div id="f-objednavka-warn" style="display:none;font-size:11px;color:#dc2626;margin-top:3px;font-weight:600"></div>
+   </div>
    <div class="form-group"><label>Datum objednávky</label><input id="f-datum-obj" type="date"></div>
    <div class="form-section">📍 Lokalita</div>
    <div class="form-group span2"><label>Adresa</label><input id="f-adresa" placeholder="např. Molákova 1"></div>
@@ -1047,12 +1053,15 @@ function renderStats() {
 }
 
 function clickStat(filter, tab, idx) {
-  // Vždy přepnout na tabulkový pohled
   currentView = 'table';
   skrytExtravPanely();
-  // Skrýt zpět tlačítko
   const zpet = document.getElementById('zpet-btn');
   if (zpet) zpet.remove();
+  // Vymazat vyhledávání a ostatní filtry
+  document.getElementById('search').value = '';
+  document.getElementById('filter-typ').value = '';
+  document.getElementById('filter-technik').value = '';
+  const fa = document.getElementById('filter-adresa'); if (fa) fa.value = '';
   const tabs = document.querySelectorAll('.tab');
   tabs.forEach(t => t.classList.remove('active'));
   if (tab==='vyfakturovane') {
@@ -1376,6 +1385,7 @@ function openModal(idx=null) {
   }
   updateRozdil();
   sledujZmeny();
+  resetDuplicitaWarnings();
 }
 let modalZmeneno = false;
 
@@ -3127,6 +3137,14 @@ function aiConfirm() {
 
   if (aiImportMode === 'pozadavek') {
     const d = aiExtractedData;
+    // Kontrola duplicity
+    if (d.cislo_pozadavku) {
+      const dupZ = najdiDuplicit('pozadavek', d.cislo_pozadavku, null);
+      if (dupZ) {
+        const pokracovat = confirm(`⚠️ Požadavek č. ${d.cislo_pozadavku} už existuje!\n\n→ ${dupZ.adresa}${dupZ.byt?' č.'+dupZ.byt:''} (${dupZ.stav})\n\nChcete přesto vytvořit novou zakázku?`);
+        if (!pokracovat) return;
+      }
+    }
     closeAiImport();
     openModal(); // Open new zakázka modal
 
@@ -3171,6 +3189,14 @@ function aiConfirm() {
   } else {
     // Objednávka mode
     const d = aiExtractedData;
+    // Kontrola duplicity objednávky
+    if (d.cislo_objednavky) {
+      const dupZ = najdiDuplicit('objednavka', d.cislo_objednavky, null);
+      if (dupZ) {
+        const pokracovat = confirm(`⚠️ Objednávka č. ${d.cislo_objednavky} už existuje!\n\n→ ${dupZ.adresa}${dupZ.byt?' č.'+dupZ.byt:''} (${dupZ.stav})\n\nChcete přesto pokračovat?`);
+        if (!pokracovat) return;
+      }
+    }
     closeAiImport();
 
     if (aiSelectedZakazkaIdx !== null) {
@@ -3289,6 +3315,62 @@ function updateDrivePreview() {
 function openDriveFolder() {
   const url = (document.getElementById('f-drive-url').value || '').trim();
   if (url) window.open(extractDriveUrl(url), '_blank');
+}
+
+// ============================================================
+// === KONTROLA DUPLICIT ===
+// ============================================================
+
+function najdiDuplicit(pole, hodnota, aktualniIdx) {
+  if (!hodnota || !hodnota.trim()) return null;
+  const c = hodnota.trim();
+  const vsechny = [...data.pozadavky, ...data.vyfakturovane, ...data.stornovane];
+  const aktualniZakazka = aktualniIdx !== null ? data.pozadavky[aktualniIdx] || data.vyfakturovane[aktualniIdx] : null;
+  for (const z of vsechny) {
+    if (z === aktualniZakazka) continue;
+    if ((z[pole] || '').trim() === c) return z;
+  }
+  return null;
+}
+
+function checkDuplicitaPozadavek(input) {
+  const warn = document.getElementById('f-pozadavek-warn');
+  const dupZ = najdiDuplicit('pozadavek', input.value, editIndex);
+  if (dupZ) {
+    warn.style.display = 'block';
+    warn.innerHTML = `⚠️ Požadavek č. <strong>${input.value.trim()}</strong> už existuje! → ${dupZ.adresa}${dupZ.byt?' č.'+dupZ.byt:''} <span style="background:#fee2e2;padding:1px 6px;border-radius:8px;font-size:10px">${dupZ.stav}</span>`;
+    input.style.borderColor = '#dc2626';
+    input.style.background = '#fff0f0';
+  } else {
+    warn.style.display = 'none';
+    input.style.borderColor = '';
+    input.style.background = '';
+  }
+}
+
+function checkDuplicitaObjednavka(input) {
+  const warn = document.getElementById('f-objednavka-warn');
+  const dupZ = najdiDuplicit('objednavka', input.value, editIndex);
+  if (dupZ) {
+    warn.style.display = 'block';
+    warn.innerHTML = `⚠️ Objednávka č. <strong>${input.value.trim()}</strong> už existuje! → ${dupZ.adresa}${dupZ.byt?' č.'+dupZ.byt:''} <span style="background:#fee2e2;padding:1px 6px;border-radius:8px;font-size:10px">${dupZ.stav}</span>`;
+    input.style.borderColor = '#dc2626';
+    input.style.background = '#fff0f0';
+  } else {
+    warn.style.display = 'none';
+    input.style.borderColor = '';
+    input.style.background = '';
+  }
+}
+
+function resetDuplicitaWarnings() {
+  ['f-pozadavek-warn','f-objednavka-warn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  ['f-pozadavek','f-objednavka'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.borderColor = ''; el.style.background = ''; }
+  });
 }
 
 document.addEventListener('mousemove', function(e) {
