@@ -692,7 +692,7 @@ body.prihlasen #main-obsah { display: block; }
         <div class="sub">Podporované formáty: PDF</div>
         <input type="file" accept=".pdf" id="ai-file-input" onchange="aiHandleFile(event)">
       </div>
-      <div class="ai-or">nebo vložte text ručně</div>
+      <div class="ai-or">nebo vložte text ručně <span style="font-size:11px;color:#aaa">(Ctrl+A → Ctrl+C v PDF readeru)</span></div>
       <textarea class="ai-textarea" id="ai-text-input" placeholder="Vložte zkopírovaný text z požadavku / objednávky..."></textarea>
 
       <!-- Loading -->
@@ -2760,6 +2760,10 @@ function openAiImport(mode) {
     document.getElementById('ai-extract-btn').style.background = '#0891b2';
   }
   document.getElementById('ai-import-overlay').classList.add('open');
+  // Reset drop zone
+  const zone = document.getElementById('ai-drop-zone');
+  zone.style.borderColor = '';
+  zone.style.background = '';
 }
 
 function closeAiImport() {
@@ -2793,7 +2797,12 @@ function aiHandleFile(event) {
 
 async function aiReadPdf(file) {
   aiShowLoading(true);
+  document.getElementById('ai-drop-zone').querySelector('.title').textContent = '⏳ Načítám PDF: ' + file.name;
   try {
+    // Ověř že PDF.js je načteno
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF knihovna se nenačetla. Zkuste vložit text ručně (Ctrl+A, Ctrl+C z PDF).');
+    }
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
@@ -2802,11 +2811,19 @@ async function aiReadPdf(file) {
       const content = await page.getTextContent();
       fullText += content.items.map(item => item.str).join(' ') + '\n';
     }
-    document.getElementById('ai-text-input').value = fullText.trim();
+    const extracted = fullText.trim();
+    if (!extracted) {
+      throw new Error('Z PDF se nepodařilo extrahovat text. PDF může být naskenovaný obrázek — zkuste text zkopírovat ručně (Ctrl+A v PDF readeru).');
+    }
+    document.getElementById('ai-text-input').value = extracted;
     aiShowLoading(false);
+    document.getElementById('ai-drop-zone').querySelector('.title').textContent = '✅ PDF načteno: ' + file.name + ' (' + pdf.numPages + ' str.)';
+    document.getElementById('ai-drop-zone').style.borderColor = '#16a34a';
+    document.getElementById('ai-drop-zone').style.background = '#f0fdf4';
     showToast('✅ PDF načteno — klikněte na Extrahovat data', true);
   } catch (err) {
     aiShowLoading(false);
+    document.getElementById('ai-drop-zone').querySelector('.title').textContent = 'Přetáhněte PDF sem nebo klikněte';
     aiShowError('Chyba při čtení PDF: ' + err.message);
   }
 }
