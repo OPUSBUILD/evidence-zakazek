@@ -136,9 +136,10 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
 .pt .sec{background:#f97316;color:white;font-weight:bold;text-align:center;font-size:10px;letter-spacing:0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pt .sec2{background:#fed7aa;color:#7c2d12;font-weight:bold;text-align:center;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pt-text{font-size:9.5px;border:1px solid #aaa;padding:5px 8px;margin-top:3px;line-height:1.4}
-.podpisy{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:16px}
+.podpisy{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:24px}
 .podpis-blok{text-align:center;font-size:9px}
-.podpis-blok .linka{border-top:1px solid #000;margin-top:36px;padding-top:3px}
+.podpis-blok .misto-podpis{height:60px;border:1px dashed #bbb;border-radius:3px;margin:8px 0 4px;background:#fafafa}
+.podpis-blok .linka{border-top:1.5px solid #000;margin-top:4px;padding-top:4px}
 .fak-area{padding:24px 28px}
 .fak-area h2{font-size:16px;font-weight:700;color:#1f3864;margin-bottom:6px}
 .fak-area .sub{font-size:12px;color:#888;margin-bottom:18px}
@@ -637,13 +638,33 @@ body.prihlasen #main-obsah { display: block; }
     <div class="podpisy">
      <div class="podpis-blok">
       <div>V Brně dne <span class="proto-editable" contenteditable="true" data-placeholder="datum">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+      <div class="misto-podpis"></div>
       <div class="linka"></div>
       <div style="font-size:9px;margin-top:2px">Za objednatele: <span class="proto-editable" contenteditable="true" data-placeholder="Jméno objednatele"></span></div>
+      <div style="font-size:9px;color:#555">technik správy, MČ Brno - Líšeň</div>
      </div>
-     <div class="podpis-blok">
+     <div class="podpis-blok" style="position:relative">
       <div>V Brně dne <strong id="p-datum-podpis" class="proto-editable" contenteditable="true"></strong></div>
+      <div class="misto-podpis" id="podpis-preview" style="position:relative;cursor:pointer" onclick="document.getElementById('podpis-upload-input').click()" title="Klikněte pro nahrání podpisu">
+       <img id="podpis-img" src="" style="display:none;max-height:56px;max-width:95%;object-fit:contain;padding:2px">
+       <div id="podpis-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:9px;gap:2px">
+        <span style="font-size:16px">✍️</span>
+        <span>Klikněte pro nahrání podpisu</span>
+       </div>
+       <input type="file" id="podpis-upload-input" accept="image/*" style="display:none" onchange="nahratPodpis(this)">
+      </div>
+      <div id="razitko-wrap" style="position:absolute;right:0;bottom:32px;width:65px;height:65px;cursor:pointer" onclick="document.getElementById('razitko-upload-input').click()" title="Klikněte pro nahrání razítka">
+       <img id="razitko-img" src="" style="display:none;width:100%;height:100%;object-fit:contain;opacity:0.75">
+       <div id="razitko-placeholder" style="width:100%;height:100%;border:1px dashed #ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#bbb;text-align:center;line-height:1.3">🔵<br>razítko</div>
+       <input type="file" id="razitko-upload-input" accept="image/*" style="display:none" onchange="nahratRazitko(this)">
+      </div>
       <div class="linka"></div>
       <div style="font-size:9px;margin-top:2px">Za zhotovitele: <span class="proto-editable" contenteditable="true">Petr Vitásek</span></div>
+      <div style="font-size:9px;color:#555">stavbyvedoucí, OPUS BUILD s.r.o.</div>
+      <div id="podpis-akce" style="margin-top:6px;display:flex;gap:6px;justify-content:center">
+       <button onclick="smazatPodpis()" style="font-size:8px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;color:#888">✕ podpis</button>
+       <button onclick="smazatRazitko()" style="font-size:8px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;color:#888">✕ razítko</button>
+      </div>
      </div>
     </div>
    </div>
@@ -1560,6 +1581,78 @@ function otevritProtokol(idx) {
   }
   switchProtoTab('protokol');
   document.getElementById('proto-overlay').classList.add('open');
+  // Načti uložené podpisy
+  setTimeout(nacistUlozenePodpisy, 50);
+}
+
+// ============================================================
+// === PODPIS A RAZÍTKO ===
+// ============================================================
+function nahratPodpis(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result;
+    localStorage.setItem('opus_podpis', b64);
+    zobrazitPodpis(b64);
+    showToast('✅ Podpis nahrán a uložen!', true);
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function nahratRazitko(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result;
+    localStorage.setItem('opus_razitko', b64);
+    zobrazitRazitko(b64);
+    showToast('✅ Razítko nahráno a uloženo!', true);
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function zobrazitPodpis(b64) {
+  const img = document.getElementById('podpis-img');
+  const ph = document.getElementById('podpis-placeholder');
+  if (!img) return;
+  img.src = b64;
+  img.style.display = 'block';
+  if (ph) ph.style.display = 'none';
+}
+
+function zobrazitRazitko(b64) {
+  const img = document.getElementById('razitko-img');
+  const ph = document.getElementById('razitko-placeholder');
+  if (!img) return;
+  img.src = b64;
+  img.style.display = 'block';
+  if (ph) ph.style.display = 'none';
+}
+
+function smazatPodpis() {
+  localStorage.removeItem('opus_podpis');
+  const img = document.getElementById('podpis-img');
+  const ph = document.getElementById('podpis-placeholder');
+  if (img) { img.src = ''; img.style.display = 'none'; }
+  if (ph) ph.style.display = 'flex';
+  showToast('Podpis smazán.', false);
+}
+
+function smazatRazitko() {
+  localStorage.removeItem('opus_razitko');
+  const img = document.getElementById('razitko-img');
+  const ph = document.getElementById('razitko-placeholder');
+  if (img) { img.src = ''; img.style.display = 'none'; }
+  if (ph) ph.style.display = 'flex';
+  showToast('Razítko smazáno.', false);
+}
+
+function nacistUlozenePodpisy() {
+  const podpis = localStorage.getItem('opus_podpis');
+  const razitko = localStorage.getItem('opus_razitko');
+  if (podpis) zobrazitPodpis(podpis);
+  if (razitko) zobrazitRazitko(razitko);
 }
 
 function switchProtoTab(tab) {
@@ -1710,6 +1803,25 @@ function tiskZakazky() {
 }
 
 function tiskProtokol() {
+  const podpis = localStorage.getItem('opus_podpis') || '';
+  const razitko = localStorage.getItem('opus_razitko') || '';
+  // Vezmi obsah protokolu a nahraď placeholder obrázky skutečnými
+  let html = document.getElementById('protokol-print').innerHTML;
+  // Odstraň tlačítka pro upload a akce z tiskové verze
+  html = html.replace(/<input[^>]*type="file"[^>]*>/gi, '');
+  html = html.replace(/<div[^>]*id="podpis-akce"[^>]*>[\s\S]*?<\/div>/gi, '');
+  // Nahraď placeholder podpisu skutečným obrázkem (nebo prázdným místem)
+  const podpisHtml = podpis
+    ? `<img src="${podpis}" style="max-height:56px;max-width:100%;object-fit:contain;-webkit-print-color-adjust:exact;print-color-adjust:exact">`
+    : '';
+  const razitkoHtml = razitko
+    ? `<img src="${razitko}" style="width:65px;height:65px;object-fit:contain;opacity:0.85;-webkit-print-color-adjust:exact;print-color-adjust:exact">`
+    : '';
+  html = html.replace(/<div[^>]*id="podpis-placeholder"[^>]*>[\s\S]*?<\/div>/gi, podpisHtml);
+  html = html.replace(/<div[^>]*id="razitko-placeholder"[^>]*>[\s\S]*?<\/div>/gi, razitkoHtml);
+  // Skryj img tagy s prázdným src, zobraz ty s daty
+  html = html.replace(/(<img[^>]*id="podpis-img"[^>]*)(style="[^"]*display:none[^"]*")/gi, podpis ? '$1style="max-height:56px;max-width:100%;object-fit:contain"' : '$1style="display:none"');
+  html = html.replace(/(<img[^>]*id="razitko-img"[^>]*)(style="[^"]*display:none[^"]*")/gi, razitko ? '$1style="width:65px;height:65px;object-fit:contain;opacity:0.85"' : '$1style="display:none"');
   const win=window.open('','_blank','width=900,height=700');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Protokol</title>
   <style>
@@ -1726,11 +1838,14 @@ function tiskProtokol() {
   .sec{background:#f97316;color:white;font-weight:bold;text-align:center;font-size:10px;letter-spacing:0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .sec2{background:#fed7aa;color:#7c2d12;font-weight:bold;text-align:center;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pt-text{font-size:9.5px;border:1px solid #aaa;padding:5px 8px;margin-top:3px;line-height:1.4}
-  .podpisy{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:16px}
-  .podpis-blok{text-align:center;font-size:9px}
-  .podpis-blok .linka{border-top:1px solid #000;margin-top:36px;padding-top:3px}
+  .podpisy{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:24px}
+  .podpis-blok{text-align:center;font-size:9px;position:relative}
+  .podpis-blok .misto-podpis{height:70px;margin:8px 0 4px;display:flex;align-items:center;justify-content:center;position:relative}
+  .podpis-blok .linka{border-top:1.5px solid #000;margin-top:4px;padding-top:4px}
   .proto-editable{border-bottom:1px solid #aaa;background:transparent;display:inline-block;padding:1px 4px}
-  </style></head><body>${document.getElementById('protokol-print').innerHTML}</body></html>`);
+  #razitko-wrap{position:absolute;right:0;bottom:32px;width:65px;height:65px}
+  input[type=file],#podpis-akce{display:none!important}
+  </style></head><body>${html}</body></html>`);
   win.document.close();
   setTimeout(()=>win.print(),500);
 }
