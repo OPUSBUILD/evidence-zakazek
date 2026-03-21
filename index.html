@@ -1197,7 +1197,7 @@ function renderTable() {
       ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th>${thSort('stav','STAV')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
-      return `<tr class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer" title="${aktualniRole!=='technik'?'Klikni pro editaci':'Klikni pro detail'}">
+      return `<tr class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
         <td style="color:#888;font-size:11px">${i+1}</td>
         <td style="font-weight:600;color:#1f3864">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
@@ -1248,7 +1248,7 @@ function renderTable() {
       ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena dle CN</th><th style="width:110px">Skutečná fakturace</th>${thSort('stav','STAV')}<th>Faktura OPUS</th><th style="min-width:180px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
-      return `<tr class="${i%2===0?'row-even':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}" title="${aktualniRole!=='technik'?'Klikni pro editaci':''}">
+      return `<tr class="${i%2===0?'row-even':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}">
         <td style="color:#888;font-size:11px">${i+1}</td>
         <td style="font-weight:600;color:#375623">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
