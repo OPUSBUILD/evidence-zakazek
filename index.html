@@ -401,6 +401,7 @@ body.prihlasen #main-obsah { display: block; }
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -437,6 +438,7 @@ body.prihlasen #main-obsah { display: block; }
     <button class="btn" id="btn-excel-tab" onclick="exportExcel()" style="background:#1d6f42;color:white">📊 Export Excel</button>
 
     <button class="btn" onclick="exportZaloha()" style="background:#0f766e;color:white">📦 Záloha dat</button>
+      <button class="btn" id="btn-souhrn" onclick="odeslатDenniSouhrn(true)" style="background:#7c3aed;color:white;display:none" title="Odeslat denní souhrn emailem">📧 Souhrn</button>
     <label class="btn" style="background:#0369a1;color:white;cursor:pointer">📨 Obnovit zálohu<input type="file" accept=".json" onchange="importZaloha(event)" style="display:none"></label>
     <button class="btn btn-ai-pozadavek" id="btn-import-pozadavek" onclick="openAiImport('pozadavek')" title="Načíst data z PDF požadavku a automaticky vytvořit zakázku">📄 Z požadavku</button>
     <button class="btn btn-ai-objednavka" id="btn-import-objednavka" onclick="openAiImport('objednavka')" title="Načíst data z PDF objednávky a doplnit do zakázky">📦 Z objednávky</button>
@@ -859,6 +861,12 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// === EMAILJS KONFIGURACE ===
+const EMAILJS_SERVICE_ID = 'opus-build';
+const EMAILJS_TEMPLATE_ID = 'template_g1dgcw2';
+const EMAILJS_PUBLIC_KEY = '4K5-_8XXWC5JniumT';
+emailjs.init(EMAILJS_PUBLIC_KEY);
 // Přihlášení platí jen do zavření prohlížeče
 firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
@@ -938,10 +946,11 @@ function odhlasit() {
 
 function nastavitRoli(role) {
   const jeTechnik = role === 'technik';
-  const techSkryt = ['btn-nova-zakazka','btn-tisk-tab','btn-excel-tab','btn-import-pozadavek','btn-import-objednavka','drive-section-header','drive-section-body'];
+  const techSkryt = ['btn-nova-zakazka','btn-tisk-tab','btn-excel-tab','btn-import-pozadavek','btn-import-objednavka','drive-section-header','drive-section-body','btn-souhrn'];
   techSkryt.forEach(id => {
     const el = document.getElementById(id);
     if (el && jeTechnik) el.style.display = 'none';
+    if (el && !jeTechnik && id === 'btn-souhrn') el.style.display = 'inline-flex';
   });
   document.querySelectorAll('.btn').forEach(btn => {
     const txt = btn.textContent.trim();
@@ -1403,6 +1412,9 @@ function renderTable() {
 
 // ===== STAV =====
 function zmenStav(idx, novyStav) {
+  const source = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
+  const z = source[idx];
+  if (z) sledovatZmenu(z, `Stav změněn: ${z.stav||'–'} → ${novyStav}`);
   if (novyStav === 'Vyfakturováno') { vyfakturovat(idx); return; }
   data.pozadavky[idx].stav = novyStav;
   saveData(); renderTable(); showToast('Stav → ' + novyStav, true);
@@ -1576,6 +1588,232 @@ function zobrazitDetail(idx) {
     // Skryje sekce pro techniky (drive editace zbytečná)
     document.querySelectorAll('.drive-section-body input').forEach(el => el.disabled = true);
   }, 100);
+}
+
+// ============================================================
+// === DENNÍ SOUHRN - EMAIL ===
+// ============================================================
+
+function formatDatumEmail(str) {
+  if (!str) return '–';
+  try { return new Date(str).toLocaleDateString('cs-CZ'); } catch(e) { return str; }
+}
+
+function sestavHtmlSouhrn(zakazky, vyfakturovane) {
+  const dnes = new Date();
+  const vcera = new Date(dnes); vcera.setDate(vcera.getDate() - 1);
+  const zaDen = new Date(dnes); zaDen.setDate(zaDen.getDate() + 7);
+  const datumStr = dnes.toLocaleDateString('cs-CZ', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  // Statistiky
+  const aktivni = zakazky.length;
+  const poTerminu = zakazky.filter(z => z.termin && new Date(z.termin) < dnes && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno').length;
+  const tentTyden = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen).length;
+
+  // Prošlé termíny
+  const prosle = zakazky.filter(z => z.termin && new Date(z.termin) < dnes && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno')
+    .sort((a,b) => new Date(a.termin) - new Date(b.termin));
+
+  // Termíny tento týden
+  const brzo = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen)
+    .sort((a,b) => new Date(a.termin) - new Date(b.termin));
+
+  // Včerejší změny - sledujeme přes localStorage
+  const vceraDatum = vcera.toISOString().split('T')[0];
+  let zmenySouhrn = [];
+  try {
+    const zmeny = JSON.parse(localStorage.getItem('opus_zmeny_' + vceraDatum) || '[]');
+    zmenySouhrn = zmeny;
+  } catch(e) {}
+
+  // Akce tento týden
+  const akceProEmail = [];
+  zakazky.forEach(z => {
+    if (!z.akce) return;
+    z.akce.forEach(a => {
+      if (a.datum && new Date(a.datum) >= dnes && new Date(a.datum) <= zaDen && a.stav !== 'hotovo') {
+        akceProEmail.push({datum: a.datum, text: a.text, zakazka: z.pozadavek || '–', adresa: z.adresa || ''});
+      }
+    });
+  });
+  akceProEmail.sort((a,b) => new Date(a.datum) - new Date(b.datum));
+
+  const rowStyle = 'padding:6px 10px;font-size:13px;border-bottom:1px solid #f0f0f0;';
+  const hdStyle = 'padding:6px 10px;font-size:11px;color:#888;font-weight:600;background:#f8f9fa;';
+
+  const tabulkaProsle = prosle.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
+      <tr><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Termín</td><td style="${hdStyle}">Stav</td></tr>
+      ${prosle.map(z => `<tr>
+        <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
+        <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+        <td style="${rowStyle}">${z.technik||'–'}</td>
+        <td style="${rowStyle}color:#c00;font-weight:600">${formatDatumEmail(z.termin)}</td>
+        <td style="${rowStyle}">${z.stav||'–'}</td>
+      </tr>`).join('')}
+    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné prošlé termíny ✅</p>';
+
+  const tabulkaBrzo = brzo.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
+      <tr><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Termín</td><td style="${hdStyle}">Stav</td></tr>
+      ${brzo.map(z => `<tr>
+        <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
+        <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+        <td style="${rowStyle}">${z.technik||'–'}</td>
+        <td style="${rowStyle}color:#b45309;font-weight:600">${formatDatumEmail(z.termin)}</td>
+        <td style="${rowStyle}">${z.stav||'–'}</td>
+      </tr>`).join('')}
+    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné termíny tento týden</p>';
+
+  const tabulkaAkce = akceProEmail.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
+      <tr><td style="${hdStyle}">Datum</td><td style="${hdStyle}">Akce</td><td style="${hdStyle}">Zakázka</td><td style="${hdStyle}">Adresa</td></tr>
+      ${akceProEmail.map(a => `<tr>
+        <td style="${rowStyle}font-weight:600;color:#7c3aed">${formatDatumEmail(a.datum)}</td>
+        <td style="${rowStyle}">${a.text}</td>
+        <td style="${rowStyle}">${a.zakazka}</td>
+        <td style="${rowStyle}">${a.adresa}</td>
+      </tr>`).join('')}
+    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné naplánované akce tento týden</p>';
+
+  const tabulkaZmeny = zmenySouhrn.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
+      <tr><td style="${hdStyle}">Zakázka</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Změna</td><td style="${hdStyle}">Nový stav</td></tr>
+      ${zmenySouhrn.map(z => `<tr>
+        <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
+        <td style="${rowStyle}">${z.adresa||''}</td>
+        <td style="${rowStyle}color:#666">${z.popis||'–'}</td>
+        <td style="${rowStyle}">${z.stav||'–'}</td>
+      </tr>`).join('')}
+    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Včera žádné změny</p>';
+
+  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;margin:0;padding:0;background:#f4f4f4">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden">
+
+  <tr><td style="background:#1F3864;padding:20px 24px">
+    <table width="100%"><tr>
+      <td><div style="color:white;font-size:18px;font-weight:bold">OPUS BUILD s.r.o.</div>
+      <div style="color:#FED7AA;font-size:12px;margin-top:2px">Evidence zakázek — denní souhrn</div></td>
+      <td align="right" style="color:#FED7AA;font-size:12px">${datumStr}</td>
+    </tr></table>
+  </td></tr>
+
+  <tr><td style="padding:20px 24px">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="25%" style="padding:0 4px 0 0">
+          <div style="background:#EFF6FF;border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#666">Celkem aktivních</div>
+            <div style="font-size:28px;font-weight:bold;color:#1F3864">${aktivni}</div>
+          </div>
+        </td>
+        <td width="25%" style="padding:0 4px">
+          <div style="background:#FEF2F2;border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#991b1b">Po termínu</div>
+            <div style="font-size:28px;font-weight:bold;color:#991b1b">${poTerminu}</div>
+          </div>
+        </td>
+        <td width="25%" style="padding:0 4px">
+          <div style="background:#FFF7ED;border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#854F0B">Termín tento týden</div>
+            <div style="font-size:28px;font-weight:bold;color:#854F0B">${tentTyden}</div>
+          </div>
+        </td>
+        <td width="25%" style="padding:0 0 0 4px">
+          <div style="background:#EAF3DE;border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:11px;color:#27500A">Akce tento týden</div>
+            <div style="font-size:28px;font-weight:bold;color:#27500A">${akceProEmail.length}</div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:0 24px 16px">
+    <div style="background:#FEF2F2;border-radius:8px;overflow:hidden">
+      <div style="background:#FCA5A5;padding:8px 12px;font-size:12px;font-weight:600;color:#7F1D1D">🔴 Prošlé termíny — ihned řešit</div>
+      ${tabulkaProsle}
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:0 24px 16px">
+    <div style="background:#FFF7ED;border-radius:8px;overflow:hidden">
+      <div style="background:#FED7AA;padding:8px 12px;font-size:12px;font-weight:600;color:#7C2D12">🟠 Termín tento týden — pohlídat</div>
+      ${tabulkaBrzo}
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:0 24px 16px">
+    <div style="background:#F5F3FF;border-radius:8px;overflow:hidden">
+      <div style="background:#DDD6FE;padding:8px 12px;font-size:12px;font-weight:600;color:#4C1D95">📅 Naplánované akce tento týden</div>
+      ${tabulkaAkce}
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:0 24px 16px">
+    <div style="background:#EAF3DE;border-radius:8px;overflow:hidden">
+      <div style="background:#BBF7D0;padding:8px 12px;font-size:12px;font-weight:600;color:#14532D">🟢 Včerejší změny zakázek</div>
+      ${tabulkaZmeny}
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:16px 24px;background:#f8f9fa;text-align:center;font-size:11px;color:#888">
+    <a href="https://opusbuild.github.io/evidence-zakazek/" style="color:#1565C0">Otevřít aplikaci</a>
+    &nbsp;|&nbsp; OPUS BUILD s.r.o. &nbsp;|&nbsp; Automatický souhrn
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+async function odeslатDenniSouhrn(manual = false) {
+  try {
+    const dnes = new Date().toISOString().split('T')[0];
+    const klic = 'opus_souhrn_odeslano_' + dnes;
+
+    // Nepošli dvakrát za den (pokud není manuální)
+    if (!manual && localStorage.getItem(klic)) {
+      console.log('Denní souhrn již odeslán dnes.');
+      return;
+    }
+
+    const html = sestavHtmlSouhrn(data.pozadavky || [], data.vyfakturovane || []);
+    const datum = new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      datum: datum,
+      html_content: html,
+      name: 'OPUS BUILD',
+      email: 'vitasek@opusbuild.cz'
+    });
+
+    localStorage.setItem(klic, '1');
+    if (manual) showToast('✅ Denní souhrn odeslán!', true);
+    console.log('Denní souhrn odeslán!');
+  } catch(err) {
+    console.error('Chyba při odesílání souhrnu:', err);
+    if (manual) showToast('❌ Chyba při odesílání: ' + (err.text || err.message || JSON.stringify(err)), false);
+  }
+}
+
+function sledovatZmenu(zakazka, popis) {
+  // Ulož změnu do localStorage pro denní souhrn
+  const dnes = new Date().toISOString().split('T')[0];
+  const klic = 'opus_zmeny_' + dnes;
+  try {
+    const zmeny = JSON.parse(localStorage.getItem(klic) || '[]');
+    zmeny.push({
+      pozadavek: zakazka.pozadavek || '–',
+      adresa: zakazka.adresa || '',
+      popis: popis,
+      stav: zakazka.stav || '',
+      cas: new Date().toLocaleTimeString('cs-CZ')
+    });
+    localStorage.setItem(klic, JSON.stringify(zmeny));
+  } catch(e) {}
 }
 
 // ============================================================
