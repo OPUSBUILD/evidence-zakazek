@@ -96,6 +96,27 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
 .btn-sm{padding:4px 8px;font-size:11px}
 .btn-print{background:#7c3aed;color:white}.btn-print:hover{background:#6d28d9}
 .btn-protokol{background:#0891b2;color:white}.btn-protokol:hover{background:#0e7490}
+.btn-akce{background:#7c3aed;color:white;font-size:11px;padding:3px 7px;border-radius:6px;border:none;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn-akce:hover{background:#6d28d9}
+.akce-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center}
+.akce-overlay.open{display:flex}
+.akce-modal{background:white;border-radius:16px;width:560px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden}
+.akce-header{background:#1f3864;color:white;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.akce-header h3{margin:0;font-size:16px;font-weight:600}
+.akce-header .sub{font-size:11px;opacity:0.75;margin-top:2px}
+.akce-body{padding:20px}
+.akce-row{display:grid;grid-template-columns:130px 1fr 80px 28px;gap:8px;align-items:center;margin-bottom:8px}
+.akce-row-head{display:grid;grid-template-columns:130px 1fr 80px 28px;gap:8px;margin-bottom:6px}
+.akce-row-head span{font-size:10px;color:#888;font-weight:500}
+.akce-date{border:1.5px solid #f97316;border-radius:6px;padding:4px 7px;font-size:12px;font-weight:500;color:#854F0B;background:#fff8f0;text-align:center;width:100%;box-sizing:border-box}
+.akce-text{border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:12px;width:100%;box-sizing:border-box;font-family:inherit}
+.akce-text:focus{border-color:#7c3aed;outline:none}
+.akce-date:focus{outline:none;border-color:#f97316}
+.akce-stav{border:1px solid #ddd;border-radius:6px;padding:3px 6px;font-size:11px;width:100%;box-sizing:border-box;font-family:inherit}
+.akce-del{background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;padding:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.akce-del:hover{background:#fee2e2}
+.akce-add-row{display:grid;grid-template-columns:130px 1fr 80px 28px;gap:8px;align-items:center;margin-top:4px;padding-top:10px;border-top:1px dashed #e0e0e0}
+.akce-footer{padding:14px 20px;background:#f8f9fa;border-top:1px solid #e0e0e0;display:flex;justify-content:flex-end;gap:8px}
 .row-actions{display:flex;gap:4px;flex-wrap:wrap}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
@@ -501,6 +522,41 @@ body.prihlasen #main-obsah { display: block; }
   <div style="margin-top:4px"><kbd>Ctrl+S</kbd> Uložit (v dialogu)</div>
   <div style="margin-top:4px"><kbd>Ctrl+1–3</kbd> Přepnout záložku</div>
   <div style="margin-top:4px"><kbd>Esc</kbd> Zavřít dialog</div>
+</div>
+
+<!-- MODAL AKCÍ / MILNÍKŮ -->
+<div class="akce-overlay" id="akce-overlay">
+ <div class="akce-modal">
+  <div class="akce-header">
+   <div>
+    <h3>📅 Naplánované akce</h3>
+    <div class="sub" id="akce-modal-sub">zakázka</div>
+   </div>
+   <button onclick="closeAkceModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+  </div>
+  <div class="akce-body">
+   <div class="akce-row-head">
+    <span>Datum</span>
+    <span>Popis akce</span>
+    <span>Stav</span>
+    <span></span>
+   </div>
+   <div id="akce-list"></div>
+   <div class="akce-add-row">
+    <input type="date" id="akce-new-date" class="akce-date" style="border-style:dashed">
+    <input type="text" id="akce-new-text" class="akce-text" placeholder="Přidat novou akci...">
+    <select id="akce-new-stav" class="akce-stav">
+     <option value="čeká">čeká</option>
+     <option value="hotovo">hotovo</option>
+    </select>
+    <button onclick="pridatAkci()" style="background:#7c3aed;color:white;border:none;border-radius:6px;cursor:pointer;font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center">+</button>
+   </div>
+  </div>
+  <div class="akce-footer">
+   <button class="btn btn-gray" onclick="closeAkceModal()">Zavřít</button>
+   <button class="btn btn-primary" onclick="ulozitAkce()">💾 Uložit akce</button>
+  </div>
+ </div>
 </div>
 
 <!-- MODAL ZAKÁZKA -->
@@ -1254,6 +1310,7 @@ function renderTable() {
         <td class="has-tooltip" style="font-size:12px;color:#555;min-width:160px;max-width:220px">${(z.kontakty||'').substring(0,45)}${z.kontakty&&z.kontakty.length>45?'…':''}<span class="tooltip-text">${(z.kontakty||'(žádné kontakty)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
         <td style="white-space:nowrap"><div class="row-actions" style="flex-wrap:nowrap;gap:2px">
           ${z.drive_url?`<a href="${extractDriveUrl(z.drive_url)}" target="_blank" class="drive-link-btn" title="Otevřít složku na Google Drive" onclick="event.stopPropagation()">📁</a>`:''}
+          ${aktualniRole!=='technik'?`<button class="btn btn-sm btn-akce" onclick="otevritAkceModal(${idx},'pozadavky');event.stopPropagation()" title="Naplánované akce" style="padding:3px 6px;font-size:11px">📅${(z.akce&&z.akce.length)?` ${z.akce.length}`:''}</button>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-protokol btn-sm" onclick="otevritProtokol(${idx})" title="Protokol" style="padding:3px 6px;font-size:11px">📄</button>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-success btn-sm" onclick="vyfakturovat(${idx})" title="Vyfakturovat" style="padding:3px 6px;font-size:11px">✅</button><button class="btn btn-sm" style="background:#991b1b;color:white;padding:3px 6px;font-size:11px" onclick="stornovat(${idx})" title="Stornovat">❌</button><button class="btn btn-danger btn-sm" onclick="deleteZakazka(${idx})" title="Smazat" style="padding:3px 6px;font-size:11px">🗑️</button>`:''}
         </div></td></tr>`;}).join('')}</tbody></table>`;
@@ -1281,7 +1338,7 @@ function renderTable() {
         <td style="font-size:12px;color:#555;min-width:180px;max-width:240px;white-space:pre-line">${z.kontakty||''}</td>
         <td><div class="row-actions">
           ${z.drive_url?`<a href="${extractDriveUrl(z.drive_url)}" target="_blank" class="drive-link-btn" title="Otevřít složku na Google Drive" onclick="event.stopPropagation()">📁</a>`:''}
-          
+          ${aktualniRole!=='technik'?`<button class="btn btn-sm btn-akce" onclick="otevritAkceModal(${idx},'vyfakturovane');event.stopPropagation()" title="Naplánované akce" style="padding:3px 6px;font-size:11px">📅${(z.akce&&z.akce.length)?` ${z.akce.length}`:''}</button>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-protokol btn-sm" onclick="otevritProtokol(${idx})" title="Protokol+Faktura">📄</button>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-danger btn-sm" onclick="deleteZakazka(${idx})" title="Smazat">🗑️</button>`:''}
         </div></td></tr>`;}).join('')}
@@ -1490,6 +1547,82 @@ function zobrazitDetail(idx) {
     // Skryje sekce pro techniky (drive editace zbytečná)
     document.querySelectorAll('.drive-section-body input').forEach(el => el.disabled = true);
   }, 100);
+}
+
+// ============================================================
+// === AKCE / MILNÍKY NA ZAKÁZCE ===
+// ============================================================
+let akceModalIdx = null;
+let akceModalTab = null;
+let akceTemp = [];
+
+function otevritAkceModal(idx, tab) {
+  akceModalIdx = idx;
+  akceModalTab = tab || currentTab;
+  const source = akceModalTab === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
+  const z = source[idx];
+  akceTemp = JSON.parse(JSON.stringify(z.akce || []));
+  document.getElementById('akce-modal-sub').textContent =
+    (z.pozadavek ? 'č. ' + z.pozadavek + ' — ' : '') + (z.adresa || '') + (z.byt ? ', byt ' + z.byt : '');
+  renderAkceList();
+  document.getElementById('akce-overlay').classList.add('open');
+  document.getElementById('akce-new-date').value = '';
+  document.getElementById('akce-new-text').value = '';
+  document.getElementById('akce-new-stav').value = 'čeká';
+}
+
+function closeAkceModal() {
+  document.getElementById('akce-overlay').classList.remove('open');
+  akceModalIdx = null;
+  akceTemp = [];
+}
+
+function renderAkceList() {
+  const list = document.getElementById('akce-list');
+  if (!akceTemp.length) {
+    list.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px;padding:12px 0;">Zatím žádné naplánované akce</div>';
+    return;
+  }
+  list.innerHTML = akceTemp.map((a, i) => `
+    <div class="akce-row">
+      <input type="date" class="akce-date" value="${a.datum||''}" onchange="akceTemp[${i}].datum=this.value">
+      <input type="text" class="akce-text" value="${(a.text||'').replace(/"/g,'&quot;')}" onchange="akceTemp[${i}].text=this.value">
+      <select class="akce-stav" onchange="akceTemp[${i}].stav=this.value">
+        <option value="čeká" ${a.stav==='čeká'?'selected':''}>čeká</option>
+        <option value="hotovo" ${a.stav==='hotovo'?'selected':''}>✅ hotovo</option>
+        <option value="zrušeno" ${a.stav==='zrušeno'?'selected':''}>❌ zrušeno</option>
+      </select>
+      <button class="akce-del" onclick="smazatAkci(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function pridatAkci() {
+  const datum = document.getElementById('akce-new-date').value;
+  const text = document.getElementById('akce-new-text').value.trim();
+  const stav = document.getElementById('akce-new-stav').value;
+  if (!text) { showToast('⚠️ Vyplňte popis akce', false); return; }
+  akceTemp.push({ datum, text, stav });
+  akceTemp.sort((a, b) => (a.datum||'').localeCompare(b.datum||''));
+  renderAkceList();
+  document.getElementById('akce-new-date').value = '';
+  document.getElementById('akce-new-text').value = '';
+  document.getElementById('akce-new-stav').value = 'čeká';
+}
+
+function smazatAkci(i) {
+  akceTemp.splice(i, 1);
+  renderAkceList();
+}
+
+function ulozitAkce() {
+  if (akceModalIdx === null) return;
+  const source = akceModalTab === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
+  source[akceModalIdx].akce = JSON.parse(JSON.stringify(akceTemp));
+  saveData();
+  renderTable();
+  closeAkceModal();
+  showToast('✅ Akce uloženy!', true);
 }
 
 function zvyraznitPosledniRadek() {
@@ -2131,7 +2264,7 @@ function ukazPripominku(zprava) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeConfirm(); closeProtokol(); closeStornoModal(); return; }
+  if (e.key === 'Escape') { closeModal(); closeConfirm(); closeProtokol(); closeStornoModal(); closeAkceModal(); return; }
 
   // Nereaguj pokud je fokus na textovém poli nebo je otevřený modal
   const tag = document.activeElement.tagName;
@@ -2172,6 +2305,7 @@ document.getElementById('modal').addEventListener('mouseup', e => {
   modalMousedownTarget = null;
 });
 document.getElementById('proto-overlay').addEventListener('click',e=>{ if(e.target===document.getElementById('proto-overlay')) closeProtokol(); });
+document.getElementById('akce-overlay').addEventListener('click',e=>{ if(e.target===document.getElementById('akce-overlay')) closeAkceModal(); });
 
 // Přihlášení řeší firebase.auth().onAuthStateChanged výše
 // Real-time sync se spouští po přihlášení (viz loadData)
