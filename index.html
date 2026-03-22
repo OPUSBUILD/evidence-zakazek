@@ -2094,7 +2094,7 @@ function saveZakazka() {
     showConfirm(
       '💾 Uložit změny?',
       `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
-      () => { z.id=orig.id; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
+      () => { z.id=orig.id; z.akce=orig.akce||[]; z.histoire=orig.histoire||[]; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
     );
   } else {
     data.pozadavky.push(z);
