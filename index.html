@@ -1235,6 +1235,8 @@ function renderTable() {
           <option value="Reklamace" ${z.stav==='Reklamace'?'selected':''}>Reklamace</option>
           <option value="K realizaci" ${z.stav==='K realizaci'?'selected':''}>K realizaci</option>
           <option value="Vyfakturováno" ${z.stav==='Vyfakturováno'?'selected':''}>Vyfakturováno</option>
+          <option value="Odloženo" ${z.stav==='Odloženo'?'selected':''}>Odloženo</option>
+          <option value="Dokončeno" ${z.stav==='Dokončeno'?'selected':''}>Dokončeno</option>
         </select>`}</td>
         <td class="has-tooltip" style="white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#666'};cursor:help">
           ${formatDatum(z.termin)}${isTerminPast(z.termin)?' ⚠️':''}
