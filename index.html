@@ -108,7 +108,9 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
 .form-group.span2{grid-column:span 2}
 .form-section{grid-column:1/-1;border-top:2px solid #e8f0fe;margin-top:6px;padding-top:8px;font-size:11px;font-weight:700;color:#2e75b6;text-transform:uppercase;letter-spacing:0.5px}
 .form-group label{font-size:11px;font-weight:600;color:#555}
-.form-group input,.form-group select,.form-group textarea{padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-family:inherit}
+.form-group input,.form-group select,.form-group textarea{padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;outline:none;font-family:inherit;color:#111;background:#fff}
+.form-group input::placeholder,.form-group textarea::placeholder{color:#c0c0c0;font-style:italic;font-weight:400}
+.form-group input:not(:placeholder-shown),.form-group textarea:not(:placeholder-shown){border-color:#2e75b6;background:#f0f7ff;color:#1a1a1a;font-weight:500}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#2e75b6;box-shadow:0 0 0 3px rgba(46,117,182,0.1)}
 .form-group textarea{min-height:60px;resize:vertical}
 .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;border-top:1px solid #e0e0e0;padding-top:14px}
@@ -474,7 +476,7 @@ body.prihlasen #main-obsah { display: block; }
   <select id="filter-typ" onchange="renderTable()">
     <option value="">Všechny typy</option>
     <option>BYT</option><option>VO</option><option>PB</option><option>REŽ</option>
-    <option>SCHOD</option><option>MAL</option><option>POD</option><option>Jiné</option>
+    <option>SCHOD</option><option>MAL</option><option>POD</option><option>Zatékání</option><option>Jiné</option>
   </select>
   <select id="filter-technik" onchange="renderTable()"><option value="">Všichni technici</option></select>
   <select id="filter-adresa" onchange="renderTable()" style="min-width:140px"><option value="">Všechny adresy</option></select>
@@ -506,13 +508,17 @@ body.prihlasen #main-obsah { display: block; }
  <div class="modal">
   <h2 id="modal-title">＋ Nová zakázka</h2>
   <div class="form-grid">
-   <div class="form-section">📋 Identifikace zakázky</div>
+   <div class="form-section" style="display:flex;align-items:center;justify-content:space-between">
+    <span>📋 Identifikace zakázky</span>
+    <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:400;color:#666">
+     Zadáno do systému:&nbsp;<input id="f-datum-zadani" type="date" style="font-size:11px;padding:3px 7px;height:26px;border:1.5px solid #f97316;border-radius:6px;background:#fff8f0;width:140px">
+    </span>
+   </div>
    <div class="form-group"><label>Požadavek č.</label>
      <input id="f-pozadavek" placeholder="např. 13126" onblur="checkDuplicitaPozadavek(this)">
      <div id="f-pozadavek-warn" style="display:none;font-size:11px;color:#dc2626;margin-top:3px;font-weight:600"></div>
    </div>
    <div class="form-group"><label>Ze dne</label><input id="f-datum" type="date"></div>
-   <div class="form-group"><label>Datum zadání do systému</label><input id="f-datum-zadani" type="date"></div>
    <div class="form-group"><label>Objednávka č.</label>
      <input id="f-objednavka" placeholder="např. 10-2026-297" onblur="checkDuplicitaObjednavka(this)">
      <div id="f-objednavka-warn" style="display:none;font-size:11px;color:#dc2626;margin-top:3px;font-weight:600"></div>
@@ -521,7 +527,7 @@ body.prihlasen #main-obsah { display: block; }
    <div class="form-section">📍 Lokalita</div>
    <div class="form-group span2"><label>Adresa</label><input id="f-adresa" placeholder="např. Molákova 1"></div>
    <div class="form-group"><label>Typ</label>
-    <select id="f-typ"><option value="">- vyberte -</option><option>BYT</option><option>VO</option><option>PB</option><option>REŽ</option><option>SCHOD</option><option>MAL</option><option>POD</option><option>SPOL</option><option>Jiné</option></select>
+    <select id="f-typ"><option value="">- vyberte -</option><option>BYT</option><option>VO</option><option>PB</option><option>REŽ</option><option>SCHOD</option><option>MAL</option><option>POD</option><option>SPOL</option><option>Zatékání</option><option>Jiné</option></select>
    </div>
    <div class="form-group"><label>Byt / č.</label><input id="f-byt" placeholder="např. 36"></div>
    <div class="form-section">🔧 Realizace</div>
@@ -532,12 +538,15 @@ body.prihlasen #main-obsah { display: block; }
     <select id="f-klice"><option value="">Ne</option><option value="mám">Mám</option></select>
    </div>
    <div class="form-group"><label>STAV</label>
-    <select id="f-stav"><option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option><option>Zahájeno</option><option>Odeslán rozpočet</option><option>Reklamace</option><option>K realizaci</option><option>Vyfakturováno</option><option>Odloženo</option></select>
+    <select id="f-stav"><option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option><option>Zahájeno</option><option>Odeslán rozpočet</option><option>Reklamace</option><option>K realizaci</option><option>Vyfakturováno</option><option>Odloženo</option><option>Dokončeno</option></select>
    </div>
    <div class="form-group"><label>Požadovaný termín</label><input id="f-termin" type="date"></div>
-   <div class="form-group span2"><label>CN odeslána</label><input id="f-cn" placeholder="např. posláno 13.3"></div>
-   <div class="form-group"><label>Co dále?</label><input id="f-codal" placeholder="např. naplánovat termín"></div>
+   <div class="form-group" style="max-width:160px"><label>CN odeslána</label><input id="f-cn" type="date" placeholder="dd.mm.rrrr"></div>
+   <div class="form-group span2"><label>Co dále?</label><input id="f-codal" placeholder="např. naplánovat termín"></div>
    <div class="form-group full"><label>Popis práce</label><textarea id="f-popis" placeholder="Stručný popis zakázky..." style="min-height:52px"></textarea></div>
+   <div class="form-section">📝 Poznámky &amp; Kontakty</div>
+   <div class="form-group span2"><label>Poznámky</label><textarea id="f-poznamky" placeholder="Doplňující poznámky..." style="min-height:110px"></textarea></div>
+   <div class="form-group span2"><label>Kontakty</label><textarea id="f-kontakty" placeholder="Jméno, telefon..." style="min-height:110px"></textarea></div>
    <div class="form-section">💰 Finance</div>
    <div class="form-group"><label>Cena dle rozpočtu (CN)</label><input id="f-castka" placeholder="např. 1 234 567,80 Kč" maxlength="16" oninput="formatCastka(this);updateRozdil()" onblur="formatCastkaFinal(this)"></div>
    <div class="form-group"><label>Skutečná fakturovaná částka</label><input id="f-castka-fak" placeholder="např. 1 234 567,80 Kč" maxlength="16" oninput="formatCastka(this);updateRozdil()" onblur="formatCastkaFinal(this)"></div>
@@ -554,9 +563,6 @@ body.prihlasen #main-obsah { display: block; }
      </div>
      <div id="f-drive-preview" style="font-size:11px;color:#16a34a;margin-top:4px;display:none">✅ Platný odkaz na Google Drive složku</div>
    </div>
-   <div class="form-section">📝 Poznámky &amp; Kontakty</div>
-   <div class="form-group span2"><label>Poznámky</label><textarea id="f-poznamky" placeholder="Doplňující poznámky..." style="min-height:52px"></textarea></div>
-   <div class="form-group span2"><label>Kontakty</label><textarea id="f-kontakty" placeholder="Jméno, telefon..." style="min-height:52px"></textarea></div>
   </div>
    <div id="modal-histoire-section" style="display:none">
     <div class="form-section" style="grid-column:1/-1;display:block;margin-top:10px">📋 Historie změn</div>
