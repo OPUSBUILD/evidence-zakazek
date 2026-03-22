@@ -588,7 +588,33 @@ body.prihlasen #main-obsah { display: block; }
    <div class="form-group"><label>Byt / č.</label><input id="f-byt" placeholder="např. 36"></div>
    <div class="form-section">🔧 Realizace</div>
    <div class="form-group"><label>Technik</label>
-    <select id="f-technik"><option value="">- vyberte -</option><option>Marcela Knížová</option><option>Hana Špačková</option><option>někdo jiný</option></select>
+    <div id="f-technik-wrap">
+     <select id="f-technik" onchange="technikZmena(this.value)">
+      <option value="">- vyberte -</option>
+      <option>Marcela Knížová</option>
+      <option>Hana Špačková</option>
+      <option>Nina Vitásková</option>
+      <div id="f-technik-extra-options"></div>
+      <option value="__novy__">+ Přidat nového technika...</option>
+     </select>
+     <div id="f-technik-novy" style="display:none;margin-top:8px;background:#f0f7ff;border:1.5px solid #2e75b6;border-radius:8px;padding:10px;display:none">
+      <div style="font-size:11px;color:#1f3864;font-weight:600;margin-bottom:6px">Nový technik</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+       <div>
+        <label style="font-size:10px;color:#666">Jméno a příjmení</label>
+        <input id="f-technik-novy-jmeno" placeholder="např. Jan Novák" style="width:100%;box-sizing:border-box;margin-top:2px">
+       </div>
+       <div>
+        <label style="font-size:10px;color:#666">Email pro notifikace</label>
+        <input id="f-technik-novy-email" placeholder="např. novak@firma.cz" type="email" style="width:100%;box-sizing:border-box;margin-top:2px">
+       </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+       <button type="button" class="btn btn-gray" style="padding:4px 10px;font-size:12px" onclick="technikNovyZrusit()">Zrušit</button>
+       <button type="button" class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="technikNovyUlozit()">✅ Přidat</button>
+      </div>
+     </div>
+    </div>
    </div>
    <div class="form-group"><label>Klíče</label>
     <select id="f-klice"><option value="">Ne</option><option value="mám">Mám</option></select>
@@ -1553,6 +1579,100 @@ function zobrazitDetail(idx) {
 }
 
 // ============================================================
+// === SPRÁVA TECHNIKŮ A JEJICH EMAILŮ ===
+// ============================================================
+
+// Načti uložené techniky z localStorage
+function getTechnici() {
+  try {
+    return JSON.parse(localStorage.getItem('opus_technici') || '[]');
+  } catch(e) { return []; }
+}
+
+function saveTechnici(list) {
+  localStorage.setItem('opus_technici', JSON.stringify(list));
+}
+
+// Výchozí technici s emaily
+const TECHNICI_DEFAULT = [
+  { jmeno: 'Marcela Knížová',  email: 'knizova@brno-lisen.cz' },
+  { jmeno: 'Hana Špačková',    email: 'spackova@brno-lisen.cz' },
+  { jmeno: 'Nina Vitásková',   email: 'vitaskova.nina@gmail.com' },
+];
+
+function getTechniciAll() {
+  const extra = getTechnici();
+  return [...TECHNICI_DEFAULT, ...extra];
+}
+
+function getEmailProTechnika(jmeno) {
+  if (!jmeno) return null;
+  const all = getTechniciAll();
+  const found = all.find(t => t.jmeno.toLowerCase() === jmeno.toLowerCase()
+    || jmeno.toLowerCase().includes(t.jmeno.split(' ')[1]?.toLowerCase() || ''));
+  return found ? found.email : null;
+}
+
+function technikZmena(val) {
+  const novy = document.getElementById('f-technik-novy');
+  if (val === '__novy__') {
+    novy.style.display = 'block';
+    document.getElementById('f-technik-novy-jmeno').focus();
+    document.getElementById('f-technik').value = '';
+  } else {
+    novy.style.display = 'none';
+  }
+}
+
+function technikNovyZrusit() {
+  document.getElementById('f-technik-novy').style.display = 'none';
+  document.getElementById('f-technik').value = '';
+  document.getElementById('f-technik-novy-jmeno').value = '';
+  document.getElementById('f-technik-novy-email').value = '';
+}
+
+function technikNovyUlozit() {
+  const jmeno = document.getElementById('f-technik-novy-jmeno').value.trim();
+  const email = document.getElementById('f-technik-novy-email').value.trim();
+  if (!jmeno) { showToast('⚠️ Zadejte jméno technika', false); return; }
+  if (!email || !email.includes('@')) { showToast('⚠️ Zadejte platný email', false); return; }
+
+  // Ulož do localStorage
+  const extra = getTechnici();
+  if (!extra.find(t => t.jmeno === jmeno)) {
+    extra.push({ jmeno, email });
+    saveTechnici(extra);
+  }
+
+  // Přidej do selectu a vyber
+  const sel = document.getElementById('f-technik');
+  // Zkontroluj zda option již existuje
+  const existing = Array.from(sel.options).find(o => o.value === jmeno);
+  if (!existing) {
+    const opt = new Option(jmeno, jmeno);
+    sel.insertBefore(opt, sel.options[sel.options.length - 1]); // před "+ Přidat"
+  }
+  sel.value = jmeno;
+
+  document.getElementById('f-technik-novy').style.display = 'none';
+  document.getElementById('f-technik-novy-jmeno').value = '';
+  document.getElementById('f-technik-novy-email').value = '';
+  showToast('✅ Technik ' + jmeno + ' uložen!', true);
+}
+
+function nacistExtraTechniky() {
+  const extra = getTechnici();
+  const sel = document.getElementById('f-technik');
+  if (!sel) return;
+  extra.forEach(t => {
+    if (!Array.from(sel.options).find(o => o.value === t.jmeno)) {
+      const opt = new Option(t.jmeno, t.jmeno);
+      sel.insertBefore(opt, sel.options[sel.options.length - 1]);
+    }
+  });
+}
+
+// ============================================================
 // === AKCE / MILNÍKY NA ZAKÁZCE ===
 // ============================================================
 let akceModalIdx = null;
@@ -1698,7 +1818,7 @@ function saveZakazka() {
     typ: document.getElementById('f-typ').value,
     byt: document.getElementById('f-byt').value,
     klice: document.getElementById('f-klice').value,
-    technik: document.getElementById('f-technik').value,
+    technik: document.getElementById('f-technik').value || document.getElementById('f-technik-novy-jmeno')?.value || '',
     popis: document.getElementById('f-popis').value,
     cn: document.getElementById('f-cn').value,
     castka: document.getElementById('f-castka').value,
@@ -1803,6 +1923,7 @@ function otevritProtokol(idx) {
   // Načti uložené podpisy
   setTimeout(nacistUlozenePodpisy, 50);
   aktualizujPocetAkci(idx, currentTab);
+  nacistExtraTechniky();
 }
 
 // ============================================================
