@@ -49,7 +49,7 @@ th{background:#1f3864;color:white;padding:7px 8px;text-align:left;font-weight:60
 .stav-select.s-Krealizaci{background:#00838F;color:#fff}
 .stav-select.s-Vyfakt{background:#e2efda;color:#375623}
 .stav-select.s-Odlozeno{background:#78909C;color:#fff}
-.stav-select.s-Dokončeno{background:#e2efda;color:#375623}
+.stav-select.s-Dokončeno{background:#1a1a1a;color:#ffffff}
 .stav-select.s-Storno{background:#fee2e2;color:#991b1b}
 
 #login-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1f3864 0%,#2e75b6 100%);z-index:9999;display:flex;align-items:center;justify-content:center}
@@ -624,10 +624,13 @@ body.prihlasen #main-obsah { display: block; }
     <div class="form-section" style="grid-column:1/-1;display:block;margin-top:10px">📋 Historie změn</div>
     <div id="modal-histoire" style="background:#f8f9fa;border-radius:8px;padding:10px;max-height:130px;overflow-y:auto;font-size:12px;margin-top:6px"></div>
    </div>
-  <div class="modal-footer">
-   <button class="btn btn-gray" onclick="closeModal()">Zrušit</button>
-   <button class="btn btn-print" onclick="tiskZakazky()" id="btn-tisk-zakazky" style="display:none">🖨️ Tisknout zakázku</button>
-   <button class="btn btn-primary" onclick="saveZakazka()">💾 Uložit zakázku</button>
+  <div class="modal-footer" style="justify-content:space-between">
+   <button class="btn btn-akce" id="btn-akce-modal" onclick="otevritAkceZModal()" style="font-size:13px;padding:7px 14px">📅 Akce <span id="akce-modal-count"></span></button>
+   <div style="display:flex;gap:10px">
+    <button class="btn btn-gray" onclick="closeModal()">Zrušit</button>
+    <button class="btn btn-print" onclick="tiskZakazky()" id="btn-tisk-zakazky" style="display:none">🖨️ Tisknout zakázku</button>
+    <button class="btn btn-primary" onclick="saveZakazka()">💾 Uložit zakázku</button>
+   </div>
   </div>
  </div>
 </div>
@@ -1556,6 +1559,19 @@ let akceModalIdx = null;
 let akceModalTab = null;
 let akceTemp = [];
 
+function otevritAkceZModal() {
+  if (editIndex === null) return;
+  otevritAkceModal(editIndex, currentTab);
+}
+
+function aktualizujPocetAkci(idx, tab) {
+  const source = (tab||currentTab) === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
+  const z = source && source[idx];
+  const pocet = z && z.akce && z.akce.length ? z.akce.length : 0;
+  const span = document.getElementById('akce-modal-count');
+  if (span) span.textContent = pocet ? `(${pocet})` : '';
+}
+
 function otevritAkceModal(idx, tab) {
   akceModalIdx = idx;
   akceModalTab = tab || currentTab;
@@ -1621,6 +1637,7 @@ function ulozitAkce() {
   source[akceModalIdx].akce = JSON.parse(JSON.stringify(akceTemp));
   saveData();
   renderTable();
+  aktualizujPocetAkci(akceModalIdx, akceModalTab);
   closeAkceModal();
   showToast('✅ Akce uloženy!', true);
 }
@@ -1785,6 +1802,7 @@ function otevritProtokol(idx) {
   document.getElementById('proto-overlay').classList.add('open');
   // Načti uložené podpisy
   setTimeout(nacistUlozenePodpisy, 50);
+  aktualizujPocetAkci(idx, currentTab);
 }
 
 // ============================================================
