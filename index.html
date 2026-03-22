@@ -1791,23 +1791,34 @@ async function odeslатDenniSouhrn(manual = false) {
     const html = sestavHtmlSouhrn(data.pozadavky || [], data.vyfakturovane || []);
     const datum = new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
-    // Odeslat správci
+    // Jedno odeslani - sablona EmailJS ma vitasek@ jako prijemce a priprava@ jako BCC
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       datum: datum,
       html_content: html,
       name: 'OPUS BUILD',
       email: 'vitasek@opusbuild.cz'
     });
-    // Odeslat i přípravě
-    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-      datum: datum,
-      html_content: html,
-      name: 'OPUS BUILD',
-      email: 'priprava@opusbuild.cz'
-    });
 
     localStorage.setItem(klic, '1');
-    if (manual) showToast('✅ Denní souhrn odeslán (správce + příprava)!', true);
+    if (manual) showToast('✅ Denni souhrn odeslan!', true);
+    console.log('Denni souhrn odeslan!');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     console.log('Denní souhrn odeslán!');
   } catch(err) {
     console.error('Chyba při odesílání souhrnu:', err);
@@ -2007,13 +2018,23 @@ function smazatAkci(i) {
 
 function ulozitAkce() {
   if (akceModalIdx === null) return;
+  // Automaticky pridej rozepsanou akci pokud ma popis
+  const newText = document.getElementById('akce-new-text').value.trim();
+  if (newText) {
+    const newDatum = document.getElementById('akce-new-date').value;
+    const newStav = document.getElementById('akce-new-stav').value;
+    akceTemp.push({ datum: newDatum, text: newText, stav: newStav });
+    akceTemp.sort((a, b) => (a.datum||'').localeCompare(b.datum||''));
+    document.getElementById('akce-new-text').value = '';
+    document.getElementById('akce-new-date').value = '';
+  }
   const source = akceModalTab === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
   source[akceModalIdx].akce = JSON.parse(JSON.stringify(akceTemp));
   saveData();
   renderTable();
   aktualizujPocetAkci(akceModalIdx, akceModalTab);
   closeAkceModal();
-  showToast('✅ Akce uloženy!', true);
+  showToast('✅ Akce ulozeny!', true);
 }
 
 function zvyraznitPosledniRadek() {
