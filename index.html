@@ -1033,6 +1033,15 @@ function loadData() {
     renderTable();
     document.getElementById('last-save').textContent = '☁️ Načteno: ' + new Date().toLocaleTimeString('cs-CZ') + ' · v2.2';
     setTimeout(zkontrolujProsleTerm, 1200);
+    // Auto-odeslání denního souhrnu (jen jednou denně, jen pro správce/přípravu)
+    setTimeout(() => {
+      if (aktualniRole === 'spravce' || aktualniRole === 'priprava') {
+        const dnes = new Date().toISOString().split('T')[0];
+        if (!localStorage.getItem('opus_souhrn_odeslano_' + dnes)) {
+          odeslатDenniSouhrn(false);
+        }
+      }
+    }, 4000);
     // Spustit real-time sync po úspěšném načtení
     if (!window._snapshotActive) {
       window._snapshotActive = true;
@@ -1687,8 +1696,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
       </tr>`).join('')}
     </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Včera žádné změny</p>';
 
-  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;margin:0;padding:0;background:#f4f4f4">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0">
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;font-family:Arial,sans-serif">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden">
 
@@ -1766,7 +1774,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
 
 </table>
 </td></tr></table>
-</body></html>`;
+`;
 }
 
 async function odeslатDenniSouhrn(manual = false) {
@@ -1783,15 +1791,23 @@ async function odeslатDenniSouhrn(manual = false) {
     const html = sestavHtmlSouhrn(data.pozadavky || [], data.vyfakturovane || []);
     const datum = new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
+    // Odeslat správci
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       datum: datum,
       html_content: html,
       name: 'OPUS BUILD',
       email: 'vitasek@opusbuild.cz'
     });
+    // Odeslat i přípravě
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      datum: datum,
+      html_content: html,
+      name: 'OPUS BUILD',
+      email: 'priprava@opusbuild.cz'
+    });
 
     localStorage.setItem(klic, '1');
-    if (manual) showToast('✅ Denní souhrn odeslán!', true);
+    if (manual) showToast('✅ Denní souhrn odeslán (správce + příprava)!', true);
     console.log('Denní souhrn odeslán!');
   } catch(err) {
     console.error('Chyba při odesílání souhrnu:', err);
@@ -2597,7 +2613,7 @@ function exportExcel() {
   const tbl=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>
   <table><tr>${h.map(hh=>`<td style="background:#1f3864;color:white;font-weight:bold">${hh}</td>`).join('')}</tr>
   ${r.map((row,i)=>`<tr style="background:${i%2===0?'#fafbff':'white'}">${row.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}
-  </table></body></html>`;
+  </table>`;
   const blob=new Blob(['\ufeff'+tbl],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='evidence_zakazek_'+new Date().toISOString().split('T')[0]+'.xls';a.click();
