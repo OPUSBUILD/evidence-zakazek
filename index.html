@@ -1313,7 +1313,10 @@ function renderTable() {
     else if (search === '__prosle__') { if (!z.termin || new Date(z.termin) >= new Date()) return false; }
     else if (search && !text.includes(search)) return false;
     if (filterAdresa && z.adresa !== filterAdresa) return false;
-    if (filterStav && z.stav!==filterStav) return false;
+    if (filterStav) {
+      const stavMatch = z.stav === filterStav || (filterStav === 'V realizaci' && z.stav === 'Zahájeno');
+      if (!stavMatch) return false;
+    }
     if (filterTyp && z.typ!==filterTyp) return false;
     if (filterTechnik && z.technik!==filterTechnik) return false;
     return true;
@@ -1341,7 +1344,7 @@ function renderTable() {
         <td style="white-space:nowrap">${z.technik||''}</td>
         <td style="text-align:right;font-weight:600;white-space:nowrap;color:#555;width:110px;font-size:12px">${z.castka||''}</td>
 
-        <td title="Stav lze změnit pouze v editaci zakázky"><span class="stav-select ${getStavClass(z.stav)}" style="display:inline-block;border-radius:20px;font-size:11px;font-weight:600;padding:4px 12px;cursor:default">${z.stav||'–'}</span></td>
+        <td title="Stav lze změnit pouze v editaci zakázky"><span class="stav-select ${getStavClass(z.stav)}" style="display:inline-block;border-radius:20px;font-size:11px;font-weight:600;padding:4px 12px;cursor:default;white-space:nowrap">${z.stav||'–'}</span></td>
         <td class="has-tooltip" style="white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#666'};cursor:help">
           ${formatDatum(z.termin)}${isTerminPast(z.termin)?' ⚠️':''}
           <span class="tooltip-text" style="min-width:320px;white-space:nowrap">
@@ -2969,7 +2972,6 @@ openModal = function(idx) {
 // Patch saveZakazka to record history
 const _origSaveZakazka = saveZakazka;
 saveZakazka = function() {
-  // Record change before saving
   if (editIndex !== null) {
     const source = currentTab === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
     const orig = source[editIndex];
@@ -2981,11 +2983,14 @@ saveZakazka = function() {
       if (orig.stav !== novyStav) zmeny.push('Stav: ' + orig.stav + ' → ' + novyStav);
       if (orig.technik !== novyTechnik) zmeny.push('Technik: ' + (orig.technik||'–') + ' → ' + (novyTechnik||'–'));
       if (orig.termin !== novyTermin) zmeny.push('Termín: ' + (orig.termin||'–') + ' → ' + (novyTermin||'–'));
-      if (zmeny.length > 0) pridatHistorii(orig, zmeny.join('; '));
-      else pridatHistorii(orig, 'Zakázka upravena');
+      if (zmeny.length > 0) {
+        pridatHistorii(orig, zmeny.join('; '));
+        // Správně zaznamenat změnu stavu s NOVÝM stavem
+        if (orig.stav !== novyStav) sledovatZmenu(orig, 'Stav změněn: ' + (orig.stav||'–') + ' → ' + novyStav, novyStav);
+      } else {
+        pridatHistorii(orig, 'Zakázka upravena');
+      }
     }
-  } else {
-    // New zakázka - history will be added after creation
   }
   _origSaveZakazka();
 };
@@ -3072,7 +3077,7 @@ function renderDashboard() {
     const stavyLabels = Object.keys(sc).filter(k => sc[k] > 0);
     const stavColors = {
       'Nacenit':'#F5C400','Prohlídka':'#6A1B9A','Objednáno':'#1565C0',
-      'Zahájeno':'#2E7D32','Odeslán rozpočet':'#E65100','Reklamace':'#C62828',
+      'Zahájeno':'#2E7D32','V realizaci':'#2E7D32','Odeslán rozpočet':'#E65100','Reklamace':'#C62828',
       'K realizaci':'#00838F','Vyfakturováno':'#388E3C','Odloženo':'#78909C','Stornováno':'#D32F2F'
     };
     const stavBgColors = stavyLabels.map(k => stavColors[k] || '#888');
@@ -3180,7 +3185,7 @@ const KANBAN_STAVY = [
   {stav:'Nacenit',color:'#ca8a04',bg:'#fef9c3'},
   {stav:'Prohlídka',color:'#7c3aed',bg:'#ede9fe'},
   {stav:'Objednáno',color:'#1f3864',bg:'#dbeafe'},
-  {stav:'Zahájeno',color:'#ea580c',bg:'#ffedd5'},
+  {stav:'V realizaci',color:'#2E7D32',bg:'#dcfce7'},
   {stav:'Odeslán rozpočet',color:'#d97706',bg:'#fef3c7'},
   {stav:'Reklamace',color:'#dc2626',bg:'#fee2e2'},
   {stav:'K realizaci',color:'#475569',bg:'#f1f5f9'},
