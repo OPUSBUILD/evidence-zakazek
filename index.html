@@ -43,7 +43,7 @@ th{background:#1f3864;color:white;padding:7px 8px;text-align:left;font-weight:60
 .stav-select.s-Nacenit{background:#F5C400;color:#5a3d00}
 .stav-select.s-Prohlídka{background:#6A1B9A;color:#fff}
 .stav-select.s-Objednáno{background:#1565C0;color:#fff}
-.stav-select.s-Zahájeno{background:#2E7D32;color:#fff}
+.stav-select.s-Vrealizaci{background:#2E7D32;color:#fff}
 .stav-select.s-Odesl{background:#E65100;color:#fff}
 .stav-select.s-Reklamace{background:#C62828;color:#fff}
 .stav-select.s-Krealizaci{background:#00838F;color:#fff}
@@ -80,7 +80,7 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
 .s-Nacenit{background:#F5C400;color:#5a3d00}
 .s-Prohlídka{background:#6A1B9A;color:#fff}
 .s-Objednáno{background:#1565C0;color:#fff}
-.s-Zahájeno{background:#2E7D32;color:#fff}
+.s-Vrealizaci{background:#2E7D32;color:#fff}
 .s-Odesl{background:#E65100;color:#fff}
 .s-Reklamace{background:#C62828;color:#fff}
 .s-Krealizaci{background:#00838F;color:#fff}
@@ -257,7 +257,7 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
   .pt .sec2{background:#fed7aa!important;color:#7c2d12!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   #tisk-tabulky-area table th{background:#1f3864!important;color:white!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   th{background:#1f3864!important;color:white!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .stav,.s-Nacenit,.s-Prohlídka,.s-Objednáno,.s-Zahájeno,.s-Odesl,.s-Reklamace,.s-Krealizaci,.s-Vyfakt,.s-Dokončeno{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .stav,.s-Nacenit,.s-Prohlídka,.s-Objednáno,.s-Vrealizaci,.s-Odesl,.s-Reklamace,.s-Krealizaci,.s-Vyfakt,.s-Dokončeno{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
 
 /* === TOOLTIP === */
@@ -433,16 +433,16 @@ body.prihlasen #main-obsah { display: block; }
     </div>
   </div>
   <div class="header-btns">
-    <button class="btn btn-print" onclick="tiskHlavni()">🖨️ Tisk / PDF</button>
-    <button class="btn btn-print" id="btn-tisk-tab" onclick="tiskTabulky()" style="display:none">🖨️ Tisk filtrace</button>
-    <button class="btn" id="btn-excel-tab" onclick="exportExcel()" style="background:#1d6f42;color:white">📊 Export Excel</button>
-
-    <button class="btn" onclick="exportZaloha()" style="background:#0f766e;color:white">📦 Záloha dat</button>
-      <button class="btn" id="btn-souhrn" onclick="odeslатDenniSouhrn(true)" style="background:#7c3aed;color:white;display:none" title="Odeslat denní souhrn emailem">📧 Souhrn</button>
-    <label class="btn" style="background:#0369a1;color:white;cursor:pointer">📨 Obnovit zálohu<input type="file" accept=".json" onchange="importZaloha(event)" style="display:none"></label>
-    <button class="btn btn-ai-pozadavek" id="btn-import-pozadavek" onclick="openAiImport('pozadavek')" title="Načíst data z PDF požadavku a automaticky vytvořit zakázku">📄 Z požadavku</button>
-    <button class="btn btn-ai-objednavka" id="btn-import-objednavka" onclick="openAiImport('objednavka')" title="Načíst data z PDF objednávky a doplnit do zakázky">📦 Z objednávky</button>
-    <span id="user-badge"></span><button id="logout-btn" onclick="odhlasit()">Odhlásit</button><button class="btn btn-primary" id="btn-nova-zakazka" onclick="openModal()">＋ Nová zakázka</button>
+    <button class="btn btn-success" id="btn-nova-zakazka" onclick="openModal()">＋ Nová zakázka</button>
+    <button class="btn" onclick="tiskHlavni()" style="background:#6b7280;color:white">🖨️ Tisk / PDF</button>
+    <button class="btn" id="btn-tisk-tab" onclick="tiskTabulky()" style="display:none;background:#6b7280;color:white">🖨️ Tisk filtrace</button>
+    <button class="btn" id="btn-excel-tab" onclick="exportExcel()" style="background:#6b7280;color:white">📊 Export Excel</button>
+    <button class="btn btn-ai-pozadavek" id="btn-import-pozadavek" onclick="openAiImport('pozadavek')" style="background:#1565C0;color:white" title="Načíst data z PDF požadavku a automaticky vytvořit zakázku">📄 Z požadavku</button>
+    <button class="btn btn-ai-objednavka" id="btn-import-objednavka" onclick="openAiImport('objednavka')" style="background:#1565C0;color:white" title="Načíst data z PDF objednávky a doplnit do zakázky">📦 Z objednávky</button>
+    <button class="btn" onclick="exportZaloha()" style="background:#0891b2;color:white">💾 Záloha dat</button>
+    <label class="btn" style="background:#0891b2;color:white;cursor:pointer">🔄 Obnovit zálohu<input type="file" accept=".json" onchange="importZaloha(event)" style="display:none"></label>
+    <button class="btn" id="btn-souhrn" onclick="odeslатDenniSouhrn(true)" style="background:#7c3aed;color:white;display:none" title="Odeslat denní souhrn emailem">📧 Zaslání souhrnu</button>
+    <span id="user-badge"></span><button id="logout-btn" onclick="odhlasit()" style="background:#b94a2c;color:white;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">Odhlásit</button>
   </div>
 </div>
 
@@ -493,7 +493,7 @@ body.prihlasen #main-obsah { display: block; }
   <select id="filter-stav" onchange="renderTable()">
     <option value="">Všechny stavy</option>
     <option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option>
-    <option>Zahájeno</option><option>Odeslán rozpočet</option><option>Reklamace</option>
+    <option>V realizaci</option><option>Odeslán rozpočet</option><option>Reklamace</option>
     <option>K realizaci</option><option>Vyfakturováno</option><option>Dokončeno</option>
   </select>
   <select id="filter-typ" onchange="renderTable()">
@@ -622,7 +622,7 @@ body.prihlasen #main-obsah { display: block; }
     <select id="f-klice"><option value="">Ne</option><option value="mám">Mám</option></select>
    </div>
    <div class="form-group"><label>STAV</label>
-    <select id="f-stav"><option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option><option>Zahájeno</option><option>Odeslán rozpočet</option><option>Reklamace</option><option>K realizaci</option><option>Vyfakturováno</option><option>Odloženo</option><option>Dokončeno</option></select>
+    <select id="f-stav"><option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option><option>V realizaci</option><option>Odeslán rozpočet</option><option>Reklamace</option><option>K realizaci</option><option>Vyfakturováno</option><option>Odloženo</option><option>Dokončeno</option></select>
    </div>
    <div class="form-group"><label>Požadovaný termín</label><input id="f-termin" type="date"></div>
    <div class="form-group" style="max-width:160px"><label>CN odeslána</label><input id="f-cn" type="date" placeholder="dd.mm.rrrr"></div>
@@ -1152,7 +1152,7 @@ function formatDatum(d) {
 function isTerminPast(t) { return t && new Date(t) < new Date(); }
 
 function getStavClass(stav) {
-  const m = {'Nacenit':'Nacenit','Prohlídka':'Prohlídka','Objednáno':'Objednáno','Zahájeno':'Zahájeno',
+  const m = {'Nacenit':'Nacenit','Prohlídka':'Prohlídka','Objednáno':'Objednáno','V realizaci':'Vrealizaci',
     'Odeslán rozpočet':'Odesl','Reklamace':'Reklamace','K realizaci':'Krealizaci',
     'Vyfakturováno':'Vyfakt','Dokončeno':'Dokončeno','Stornováno':'Storno','Odloženo':'Odlozeno'};
   return 's-' + (m[stav] || 'Nacenit');
@@ -1333,7 +1333,7 @@ function renderTable() {
           <option value="Nacenit" ${z.stav==='Nacenit'?'selected':''}>Nacenit</option>
           <option value="Prohlídka" ${z.stav==='Prohlídka'?'selected':''}>Prohlídka</option>
           <option value="Objednáno" ${z.stav==='Objednáno'?'selected':''}>Objednáno</option>
-          <option value="Zahájeno" ${z.stav==='Zahájeno'?'selected':''}>Zahájeno</option>
+          <option value="V realizaci" ${z.stav==='V realizaci'?'selected':''}>V realizaci</option>
           <option value="Odeslán rozpočet" ${z.stav==='Odeslán rozpočet'?'selected':''}>Odeslán rozpočet</option>
           <option value="Reklamace" ${z.stav==='Reklamace'?'selected':''}>Reklamace</option>
           <option value="K realizaci" ${z.stav==='K realizaci'?'selected':''}>K realizaci</option>
@@ -1611,21 +1611,31 @@ function formatDatumEmail(str) {
 function sestavHtmlSouhrn(zakazky, vyfakturovane) {
   const dnes = new Date();
   const vcera = new Date(dnes); vcera.setDate(vcera.getDate() - 1);
-  const zaDen = new Date(dnes); zaDen.setDate(zaDen.getDate() + 7);
+  const zaDen = new Date(dnes); zaDen.setDate(zaDen.getDate() + 21);
   const datumStr = dnes.toLocaleDateString('cs-CZ', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  // Čas generování
+  const hh = String(dnes.getHours()).padStart(2,'0');
+  const mm = String(dnes.getMinutes()).padStart(2,'0');
+  const casGenerovani = hh + ':' + mm;
 
   // Statistiky
   const aktivni = zakazky.length;
   const poTerminu = zakazky.filter(z => z.termin && new Date(z.termin) < dnes && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno').length;
-  const tentTyden = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen).length;
+  const tentTyden = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno').length;
+  const vRealizaci = zakazky.filter(z => z.stav === 'V realizaci').length;
 
   // Prošlé termíny
   const prosle = zakazky.filter(z => z.termin && new Date(z.termin) < dnes && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno')
     .sort((a,b) => new Date(a.termin) - new Date(b.termin));
 
-  // Termíny tento týden
-  const brzo = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen)
+  // Termíny 21 dní
+  const brzo = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno')
     .sort((a,b) => new Date(a.termin) - new Date(b.termin));
+
+  // Zakázky V realizaci
+  const realizaceList = zakazky.filter(z => z.stav === 'V realizaci')
+    .sort((a,b) => (a.adresa||'').localeCompare(b.adresa||''));
 
   // Včerejší změny - sledujeme přes localStorage
   const vceraDatum = vcera.toISOString().split('T')[0];
@@ -1672,7 +1682,21 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
         <td style="${rowStyle}color:#b45309;font-weight:600">${formatDatumEmail(z.termin)}</td>
         <td style="${rowStyle}">${z.stav||'–'}</td>
       </tr>`).join('')}
-    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné termíny tento týden</p>';
+    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné termíny v příštích 21 dnech</p>';
+
+  const tabulkaRealizace = realizaceList.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
+      <tr><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Popis</td><td style="${hdStyle}">Termín</td></tr>
+      ${realizaceList.map(z => `<tr style="background:#f0fdf4">
+        <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
+        <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+        <td style="${rowStyle}">${z.technik||'–'}</td>
+        <td style="${rowStyle}">${z.popis||'–'}</td>
+        <td style="${rowStyle}color:#166534;font-weight:600">${z.termin?formatDatumEmail(z.termin):'—'}</td>
+      </tr>`).join('')}
+    </table>
+    <p style="color:#888;font-size:11px;padding:4px 10px 8px;font-style:italic">Všechny aktivní zakázky ve stavu V realizaci</p>`
+    : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné zakázky v realizaci</p>';
 
   const tabulkaAkce = akceProEmail.length ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
@@ -1698,78 +1722,96 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
 
   return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;font-family:Arial,sans-serif">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden">
+<table width="620" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden">
 
-  <tr><td style="background:#1F3864;padding:20px 24px">
+  <tr><td style="background:#1F3864;padding:16px 24px">
     <table width="100%"><tr>
       <td><div style="color:white;font-size:18px;font-weight:bold">OPUS BUILD s.r.o.</div>
       <div style="color:#FED7AA;font-size:12px;margin-top:2px">Evidence zakázek — denní souhrn</div></td>
-      <td align="right" style="color:#FED7AA;font-size:12px">${datumStr}</td>
+      <td align="right">
+        <div style="color:white;font-size:13px;font-weight:600">${datumStr}</div>
+        <div style="color:#93c5fd;font-size:11px;margin-top:3px">Vygenerováno v ${casGenerovani}</div>
+      </td>
     </tr></table>
   </td></tr>
 
-  <tr><td style="padding:20px 24px">
+  <tr><td style="padding:12px 24px 0">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td width="25%" style="padding:0 4px 0 0">
-          <div style="background:#EFF6FF;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:11px;color:#666">Celkem aktivních</div>
-            <div style="font-size:28px;font-weight:bold;color:#1F3864">${aktivni}</div>
+        <td width="20%" style="padding:0 3px 0 0">
+          <div style="background:#dbeafe;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#1e40af;font-weight:600">Celkem aktivních</div>
+            <div style="font-size:24px;font-weight:bold;color:#1e40af">${aktivni}</div>
           </div>
         </td>
-        <td width="25%" style="padding:0 4px">
-          <div style="background:#FEF2F2;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:11px;color:#991b1b">Po termínu</div>
-            <div style="font-size:28px;font-weight:bold;color:#991b1b">${poTerminu}</div>
+        <td width="20%" style="padding:0 3px">
+          <div style="background:#FCA5A5;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#7F1D1D;font-weight:600">Po termínu</div>
+            <div style="font-size:24px;font-weight:bold;color:#7F1D1D">${poTerminu}</div>
           </div>
         </td>
-        <td width="25%" style="padding:0 4px">
-          <div style="background:#FFF7ED;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:11px;color:#854F0B">Termín tento týden</div>
-            <div style="font-size:28px;font-weight:bold;color:#854F0B">${tentTyden}</div>
+        <td width="20%" style="padding:0 3px">
+          <div style="background:#FED7AA;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#7C2D12;font-weight:600">Termín 21 dní</div>
+            <div style="font-size:24px;font-weight:bold;color:#7C2D12">${tentTyden}</div>
           </div>
         </td>
-        <td width="25%" style="padding:0 0 0 4px">
-          <div style="background:#EAF3DE;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:11px;color:#27500A">Akce tento týden</div>
-            <div style="font-size:28px;font-weight:bold;color:#27500A">${akceProEmail.length}</div>
+        <td width="20%" style="padding:0 3px">
+          <div style="background:#dcfce7;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#14532d;font-weight:600">V realizaci</div>
+            <div style="font-size:24px;font-weight:bold;color:#14532d">${vRealizaci}</div>
+          </div>
+        </td>
+        <td width="20%" style="padding:0 0 0 3px">
+          <div style="background:#DDD6FE;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#4C1D95;font-weight:600">Akce týden</div>
+            <div style="font-size:24px;font-weight:bold;color:#4C1D95">${akceProEmail.length}</div>
           </div>
         </td>
       </tr>
     </table>
   </td></tr>
 
-  <tr><td style="padding:0 24px 16px">
-    <div style="background:#FEF2F2;border-radius:8px;overflow:hidden">
+  <tr><td style="padding:10px 24px 0"><div style="height:1px;background:#e5e7eb"></div></td></tr>
+
+  <tr><td style="padding:10px 24px 0">
+    <div style="border-radius:8px;overflow:hidden">
       <div style="background:#FCA5A5;padding:8px 12px;font-size:12px;font-weight:600;color:#7F1D1D">🔴 Prošlé termíny — ihned řešit</div>
       ${tabulkaProsle}
     </div>
   </td></tr>
 
-  <tr><td style="padding:0 24px 16px">
-    <div style="background:#FFF7ED;border-radius:8px;overflow:hidden">
-      <div style="background:#FED7AA;padding:8px 12px;font-size:12px;font-weight:600;color:#7C2D12">🟠 Termín tento týden — pohlídat</div>
+  <tr><td style="padding:10px 24px 0">
+    <div style="border-radius:8px;overflow:hidden">
+      <div style="background:#FED7AA;padding:8px 12px;font-size:12px;font-weight:600;color:#7C2D12">🟠 Termíny ukončení pro nadcházejících 21 dní</div>
       ${tabulkaBrzo}
     </div>
   </td></tr>
 
-  <tr><td style="padding:0 24px 16px">
-    <div style="background:#F5F3FF;border-radius:8px;overflow:hidden">
+  <tr><td style="padding:10px 24px 0">
+    <div style="border-radius:8px;overflow:hidden">
+      <div style="background:#dcfce7;padding:8px 12px;font-size:12px;font-weight:600;color:#14532d">🟢 Zakázky v realizaci</div>
+      ${tabulkaRealizace}
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:10px 24px 0">
+    <div style="border-radius:8px;overflow:hidden">
       <div style="background:#DDD6FE;padding:8px 12px;font-size:12px;font-weight:600;color:#4C1D95">📅 Naplánované akce tento týden</div>
       ${tabulkaAkce}
     </div>
   </td></tr>
 
-  <tr><td style="padding:0 24px 16px">
-    <div style="background:#EAF3DE;border-radius:8px;overflow:hidden">
-      <div style="background:#BBF7D0;padding:8px 12px;font-size:12px;font-weight:600;color:#14532D">🟢 Včerejší změny zakázek</div>
+  <tr><td style="padding:10px 24px 0">
+    <div style="border-radius:8px;overflow:hidden">
+      <div style="background:#e5e7eb;padding:8px 12px;font-size:12px;font-weight:600;color:#6b7280">📋 Včerejší změny zakázek</div>
       ${tabulkaZmeny}
     </div>
   </td></tr>
 
-  <tr><td style="padding:16px 24px;background:#f8f9fa;text-align:center;font-size:11px;color:#888">
+  <tr><td style="padding:14px 24px;background:#f8f9fa;text-align:center;font-size:11px;color:#888;margin-top:10px">
     <a href="https://opusbuild.github.io/evidence-zakazek/" style="color:#1565C0">Otevřít aplikaci</a>
-    &nbsp;|&nbsp; OPUS BUILD s.r.o. &nbsp;|&nbsp; Automatický souhrn
+    &nbsp;|&nbsp; OPUS BUILD s.r.o. &nbsp;|&nbsp; Automatický souhrn &nbsp;|&nbsp; Vygenerováno v ${casGenerovani}
   </td></tr>
 
 </table>
