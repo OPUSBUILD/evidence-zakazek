@@ -1424,7 +1424,7 @@ function renderTable() {
 function zmenStav(idx, novyStav) {
   const source = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
   const z = source[idx];
-  if (z) sledovatZmenu(z, `Stav změněn: ${z.stav||'–'} → ${novyStav}`);
+  if (z) sledovatZmenu(z, `Stav změněn: ${z.stav||'–'} → ${novyStav}`, novyStav);
   if (novyStav === 'Vyfakturováno') { vyfakturovat(idx); return; }
   data.pozadavky[idx].stav = novyStav;
   saveData(); renderTable(); showToast('Stav → ' + novyStav, true);
@@ -1624,7 +1624,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
   const aktivni = zakazky.length;
   const poTerminu = zakazky.filter(z => z.termin && new Date(z.termin) < dnes && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno').length;
   const tentTyden = zakazky.filter(z => z.termin && new Date(z.termin) >= dnes && new Date(z.termin) <= zaDen && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno').length;
-  const vRealizaci = zakazky.filter(z => z.stav === 'V realizaci').length;
+  const vRealizaci = zakazky.filter(z => z.stav === 'V realizaci' || z.stav === 'Zahájeno').length;
 
   // Prošlé termíny
   const prosle = zakazky.filter(z => z.termin && new Date(z.termin) < dnes && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno')
@@ -1635,7 +1635,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
     .sort((a,b) => new Date(a.termin) - new Date(b.termin));
 
   // Zakázky V realizaci
-  const realizaceList = zakazky.filter(z => z.stav === 'V realizaci')
+  const realizaceList = zakazky.filter(z => z.stav === 'V realizaci' || z.stav === 'Zahájeno')
     .sort((a,b) => (a.adresa||'').localeCompare(b.adresa||''));
 
   // Včerejší změny - sledujeme přes localStorage
@@ -1869,7 +1869,7 @@ async function odeslатDenniSouhrn(manual = false) {
   }
 }
 
-function sledovatZmenu(zakazka, popis) {
+function sledovatZmenu(zakazka, popis, novyStav) {
   // Ulož změnu do localStorage pro denní souhrn
   const dnes = new Date().toISOString().split('T')[0];
   const klic = 'opus_zmeny_' + dnes;
@@ -1879,7 +1879,7 @@ function sledovatZmenu(zakazka, popis) {
       pozadavek: zakazka.pozadavek || '–',
       adresa: zakazka.adresa || '',
       popis: popis,
-      stav: zakazka.stav || '',
+      stav: novyStav || zakazka.stav || '', // nový stav, ne starý!
       cas: new Date().toLocaleTimeString('cs-CZ')
     });
     localStorage.setItem(klic, JSON.stringify(zmeny));
