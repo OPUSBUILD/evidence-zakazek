@@ -1192,7 +1192,7 @@ function renderStats() {
     {label:'Odloženo',          number:sc['Odloženo']||0,  color:'#78909C', colorClass:'sc-gray',   icon:'⏸️', filter:'Odloženo',          tab:'pozadavky'},
     {label:'Stornováno',        number:stor.length,        color:'#991b1b', colorClass:'sc-red',    icon:'❌', filter:null,               tab:'stornovane', separator:true},
     {label:'Vyfakturováno',     number:vyf.length,         color:'#16a34a', colorClass:'sc-green',  icon:'✅', filter:null,               tab:'vyfakturovane'},
-    {label:'Dokončeno',         number:vyf.filter(z=>z.stav==='Dokončeno').length, color:'#1a1a1a', colorClass:'sc-dark', icon:'🏁', filter:'Dokončeno', tab:'vyfakturovane'},
+    {label:'Dokončeno',         number:sc['Dokončeno']||0, color:'#1a1a1a', colorClass:'sc-dark', icon:'🏁', filter:'Dokončeno', tab:'pozadavky'},
     {label:'Fin. objem CN',     number:formatCastkaTxt(totalCNaktivni), color:'#7c3aed', colorClass:'sc-purple', icon:'💰', filter:null, tab:'pozadavky', wide:true},
     {label:'Fin. objem FAK',    number:formatCastkaTxt(totalFAK), color:'#16a34a', colorClass:'sc-green', icon:'💵', filter:null, tab:'vyfakturovane', wide:true},
   ];
