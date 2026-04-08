@@ -27,8 +27,6 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0f2f5;
 .sc-purple{background:#ede9fe!important;border-left-color:#7c3aed!important}.sc-purple .number{color:#4c1d95!important}.sc-purple .label{color:#4c1d95!important}
 .sc-teal{background:#e0f7f4!important;border-left-color:#00838F!important}.sc-teal .number{color:#00838F!important}.sc-teal .label{color:#00838F!important}
 .sc-gray{background:#f1f5f9!important;border-left-color:#78909C!important}.sc-gray .number{color:#455a64!important}.sc-gray .label{color:#607d8b!important}
-.sc-dark{background:#f0f0f0!important;border-left-color:#1a1a1a!important}.sc-dark .number{color:#1a1a1a!important}.sc-dark .label{color:#333!important}
-.sc-violet{background:#f3e5f5!important;border-left-color:#6A1B9A!important}.sc-violet .number{color:#4A148C!important}.sc-violet .label{color:#6A1B9A!important}
 .tabs{display:flex;padding:0 24px;background:white;border-bottom:2px solid #e0e0e0;position:sticky;top:150px;z-index:97}
 .tab{padding:12px 24px;cursor:pointer;font-size:14px;font-weight:500;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.2s}
 .tab.active{color:#2e75b6;border-bottom-color:#2e75b6}
@@ -876,9 +874,8 @@ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
 const EMAIL_ROLE_MAP = {
   'vitasek@opusbuild.cz':  { role: 'spravce', label: '👤 Správce' },
   'priprava@opusbuild.cz': { role: 'priprava', label: '📋 Příprava' },
-  'knizova@brno-lisen.cz':      { role: 'technik', label: '🔧 Technik' },
-  'spackova@brno-lisen.cz':     { role: 'technik', label: '🔧 Technik' },
-  'vitaskova.nina@gmail.com':   { role: 'technik', label: '🔧 Technik' }
+  'vitaskova.nina@gmail.com':   { role: 'technik', label: '🔧 Technik' },
+  'zakazkylisen@gmail.com':     { role: 'technik', label: '🔧 Technik' }
 };
 let aktualniRole = null;
 
@@ -1180,11 +1177,9 @@ function renderStats() {
   const sc = {};
   poz.forEach(z => { sc[z.stav]=(sc[z.stav]||0)+1; });
   const totalCNaktivni = poz.reduce((s,z)=>s+parseCastka(z.castka),0);
-  const totalFAK = vyf.reduce((s,z)=>s+parseCastka(z.castka_fak),0);
   const cards = [
     {label:'Aktivní požadavky', number:poz.length,         color:'#2563eb', colorClass:'sc-blue',   icon:'📋', filter:null,               tab:'pozadavky', separator:true},
     {label:'Nacenit',           number:sc['Nacenit']||0,   color:'#ca8a04', colorClass:'sc-yellow', icon:'💡', filter:'Nacenit',           tab:'pozadavky'},
-    {label:'Prohlídka',         number:sc['Prohlídka']||0, color:'#6A1B9A', colorClass:'sc-violet', icon:'👁️', filter:'Prohlídka',         tab:'pozadavky'},
     {label:'Odeslán rozpočet',  number:sc['Odeslán rozpočet']||0, color:'#d97706', colorClass:'sc-amber', icon:'📄', filter:'Odeslán rozpočet', tab:'pozadavky'},
     {label:'Objednáno',         number:sc['Objednáno']||0, color:'#1565C0', colorClass:'sc-blue',   icon:'📦', filter:'Objednáno',         tab:'pozadavky'},
     {label:'K realizaci',       number:sc['K realizaci']||0,color:'#00838F',colorClass:'sc-teal',   icon:'🔧', filter:'K realizaci',       tab:'pozadavky'},
@@ -1192,9 +1187,7 @@ function renderStats() {
     {label:'Odloženo',          number:sc['Odloženo']||0,  color:'#78909C', colorClass:'sc-gray',   icon:'⏸️', filter:'Odloženo',          tab:'pozadavky'},
     {label:'Stornováno',        number:stor.length,        color:'#991b1b', colorClass:'sc-red',    icon:'❌', filter:null,               tab:'stornovane', separator:true},
     {label:'Vyfakturováno',     number:vyf.length,         color:'#16a34a', colorClass:'sc-green',  icon:'✅', filter:null,               tab:'vyfakturovane'},
-    {label:'Dokončeno',         number:sc['Dokončeno']||0, color:'#1a1a1a', colorClass:'sc-dark', icon:'🏁', filter:'Dokončeno', tab:'pozadavky'},
     {label:'Fin. objem CN',     number:formatCastkaTxt(totalCNaktivni), color:'#7c3aed', colorClass:'sc-purple', icon:'💰', filter:null, tab:'pozadavky', wide:true},
-    {label:'Fin. objem FAK',    number:formatCastkaTxt(totalFAK), color:'#16a34a', colorClass:'sc-green', icon:'💵', filter:null, tab:'vyfakturovane', wide:true},
   ];
   document.getElementById('stats').innerHTML = cards.map((s,i) => {
     const isA = activeStatFilter===s.filter && s.filter!==null;
