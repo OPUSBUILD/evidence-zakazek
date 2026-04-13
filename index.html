@@ -25,6 +25,7 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0f2f5;
 .sc-red{background:#fee2e2!important;border-left-color:#dc2626!important}.sc-red .number{color:#991b1b!important}.sc-red .label{color:#991b1b!important}
 .sc-green{background:#dcfce7!important;border-left-color:#16a34a!important}.sc-green .number{color:#166534!important}.sc-green .label{color:#166534!important}
 .sc-purple{background:#ede9fe!important;border-left-color:#7c3aed!important}.sc-purple .number{color:#4c1d95!important}.sc-purple .label{color:#4c1d95!important}
+.sc-violet{background:#f3e5f5!important;border-left-color:#6A1B9A!important}.sc-violet .number{color:#4A148C!important}.sc-violet .label{color:#6A1B9A!important}
 .sc-teal{background:#e0f7f4!important;border-left-color:#00838F!important}.sc-teal .number{color:#00838F!important}.sc-teal .label{color:#00838F!important}
 .sc-gray{background:#f1f5f9!important;border-left-color:#78909C!important}.sc-gray .number{color:#455a64!important}.sc-gray .label{color:#607d8b!important}
 .tabs{display:flex;padding:0 24px;background:white;border-bottom:2px solid #e0e0e0;position:sticky;top:150px;z-index:97}
@@ -494,7 +495,7 @@ body.prihlasen #main-obsah { display: block; }
     <option value="">Všechny stavy</option>
     <option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option>
     <option>V realizaci</option><option>Odeslán rozpočet</option><option>Reklamace</option>
-    <option>K realizaci</option><option>Vyfakturováno</option><option>Dokončeno</option>
+    <option>K realizaci</option><option>Odloženo</option><option>Vyfakturováno</option><option>Dokončeno</option>
   </select>
   <select id="filter-typ" onchange="renderTable()">
     <option value="">Všechny typy</option>
@@ -1180,6 +1181,7 @@ function renderStats() {
   const cards = [
     {label:'Aktivní požadavky', number:poz.length,         color:'#2563eb', colorClass:'sc-blue',   icon:'📋', filter:null,               tab:'pozadavky', separator:true},
     {label:'Nacenit',           number:sc['Nacenit']||0,   color:'#ca8a04', colorClass:'sc-yellow', icon:'💡', filter:'Nacenit',           tab:'pozadavky'},
+    {label:'Prohlídka',         number:sc['Prohlídka']||0, color:'#6A1B9A', colorClass:'sc-violet', icon:'👁️', filter:'Prohlídka',         tab:'pozadavky'},
     {label:'Odeslán rozpočet',  number:sc['Odeslán rozpočet']||0, color:'#d97706', colorClass:'sc-amber', icon:'📄', filter:'Odeslán rozpočet', tab:'pozadavky'},
     {label:'Objednáno',         number:sc['Objednáno']||0, color:'#1565C0', colorClass:'sc-blue',   icon:'📦', filter:'Objednáno',         tab:'pozadavky'},
     {label:'K realizaci',       number:sc['K realizaci']||0,color:'#00838F',colorClass:'sc-teal',   icon:'🔧', filter:'K realizaci',       tab:'pozadavky'},
