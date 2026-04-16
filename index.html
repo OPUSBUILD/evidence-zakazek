@@ -18,16 +18,21 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0f2f5;
 .stat-card.active-filter{box-shadow:0 0 0 2px #2e75b6;transform:translateY(-2px)}
 .stat-card .number{font-size:18px;font-weight:700;line-height:1.2}
 .stat-card .label{font-size:10px;color:#666;margin-top:2px}
-.sc-blue{background:#dbeafe!important;border-left-color:#2563eb!important}.sc-blue .number{color:#1e40af!important}.sc-blue .label{color:#1d4ed8!important}
+.sc-blue{background:#2563eb!important;border-left-color:#1d4ed8!important}.sc-blue .number{color:#fff!important}.sc-blue .label{color:rgba(255,255,255,0.9)!important}
 .sc-yellow{background:#fef9c3!important;border-left-color:#ca8a04!important}.sc-yellow .number{color:#854d0e!important}.sc-yellow .label{color:#854d0e!important}
 .sc-orange{background:#ffedd5!important;border-left-color:#ea580c!important}.sc-orange .number{color:#9a3412!important}.sc-orange .label{color:#9a3412!important}
 .sc-amber{background:#fef3c7!important;border-left-color:#d97706!important}.sc-amber .number{color:#92400e!important}.sc-amber .label{color:#92400e!important}
 .sc-red{background:#fee2e2!important;border-left-color:#dc2626!important}.sc-red .number{color:#991b1b!important}.sc-red .label{color:#991b1b!important}
-.sc-green{background:#dcfce7!important;border-left-color:#16a34a!important}.sc-green .number{color:#166534!important}.sc-green .label{color:#166534!important}
-.sc-purple{background:#ede9fe!important;border-left-color:#7c3aed!important}.sc-purple .number{color:#4c1d95!important}.sc-purple .label{color:#4c1d95!important}
-.sc-violet{background:#f3e5f5!important;border-left-color:#6A1B9A!important}.sc-violet .number{color:#4A148C!important}.sc-violet .label{color:#6A1B9A!important}
-.sc-teal{background:#e0f7f4!important;border-left-color:#00838F!important}.sc-teal .number{color:#00838F!important}.sc-teal .label{color:#00838F!important}
-.sc-gray{background:#f1f5f9!important;border-left-color:#78909C!important}.sc-gray .number{color:#455a64!important}.sc-gray .label{color:#607d8b!important}
+.sc-green{background:#2E7D32!important;border-left-color:#1B5E20!important}.sc-green .number{color:#fff!important}.sc-green .label{color:rgba(255,255,255,0.9)!important}
+.sc-purple{background:#7c3aed!important;border-left-color:#5b21b6!important}.sc-purple .number{color:#fff!important}.sc-purple .label{color:rgba(255,255,255,0.9)!important}
+.sc-teal{background:#00838F!important;border-left-color:#006064!important}.sc-teal .number{color:#fff!important}.sc-teal .label{color:rgba(255,255,255,0.9)!important}
+.sc-gray{background:#78909C!important;border-left-color:#546E7A!important}.sc-gray .number{color:#fff!important}.sc-gray .label{color:rgba(255,255,255,0.9)!important}
+.sc-gold{background:#F5C400!important;border-left-color:#c49b00!important}.sc-gold .number{color:#5a3d00!important}.sc-gold .label{color:#5a3d00!important}
+.sc-violet{background:#6A1B9A!important;border-left-color:#4A148C!important}.sc-violet .number{color:#fff!important}.sc-violet .label{color:rgba(255,255,255,0.9)!important}
+.sc-deeporange{background:#E65100!important;border-left-color:#BF360C!important}.sc-deeporange .number{color:#fff!important}.sc-deeporange .label{color:rgba(255,255,255,0.9)!important}
+.sc-dark{background:#1a1a1a!important;border-left-color:#000!important}.sc-dark .number{color:#fff!important}.sc-dark .label{color:rgba(255,255,255,0.9)!important}
+.sc-objednano{background:#1565C0!important;border-left-color:#0D47A1!important}.sc-objednano .number{color:#fff!important}.sc-objednano .label{color:rgba(255,255,255,0.9)!important}
+.sc-vyfakt{background:#e2efda!important;border-left-color:#388E3C!important}.sc-vyfakt .number{color:#375623!important}.sc-vyfakt .label{color:#375623!important}
 .tabs{display:flex;padding:0 24px;background:white;border-bottom:2px solid #e0e0e0;position:sticky;top:150px;z-index:97}
 .tab{padding:12px 24px;cursor:pointer;font-size:14px;font-weight:500;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.2s}
 .tab.active{color:#2e75b6;border-bottom-color:#2e75b6}
@@ -495,7 +500,7 @@ body.prihlasen #main-obsah { display: block; }
     <option value="">Všechny stavy</option>
     <option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option>
     <option>V realizaci</option><option>Odeslán rozpočet</option><option>Reklamace</option>
-    <option>K realizaci</option><option>Odloženo</option><option>Vyfakturováno</option><option>Dokončeno</option>
+    <option>K realizaci</option><option>Vyfakturováno</option><option>Dokončeno</option><option>Odloženo</option>
   </select>
   <select id="filter-typ" onchange="renderTable()">
     <option value="">Všechny typy</option>
@@ -1180,15 +1185,16 @@ function renderStats() {
   const totalCNaktivni = poz.reduce((s,z)=>s+parseCastka(z.castka),0);
   const cards = [
     {label:'Aktivní požadavky', number:poz.length,         color:'#2563eb', colorClass:'sc-blue',   icon:'📋', filter:null,               tab:'pozadavky', separator:true},
-    {label:'Nacenit',           number:sc['Nacenit']||0,   color:'#ca8a04', colorClass:'sc-yellow', icon:'💡', filter:'Nacenit',           tab:'pozadavky'},
+    {label:'Nacenit',           number:sc['Nacenit']||0,   color:'#F5C400', colorClass:'sc-gold',   icon:'💡', filter:'Nacenit',           tab:'pozadavky'},
     {label:'Prohlídka',         number:sc['Prohlídka']||0, color:'#6A1B9A', colorClass:'sc-violet', icon:'👁️', filter:'Prohlídka',         tab:'pozadavky'},
-    {label:'Odeslán rozpočet',  number:sc['Odeslán rozpočet']||0, color:'#d97706', colorClass:'sc-amber', icon:'📄', filter:'Odeslán rozpočet', tab:'pozadavky'},
-    {label:'Objednáno',         number:sc['Objednáno']||0, color:'#1565C0', colorClass:'sc-blue',   icon:'📦', filter:'Objednáno',         tab:'pozadavky'},
+    {label:'Odeslán rozpočet',  number:sc['Odeslán rozpočet']||0, color:'#E65100', colorClass:'sc-deeporange', icon:'📄', filter:'Odeslán rozpočet', tab:'pozadavky'},
+    {label:'Objednáno',         number:sc['Objednáno']||0, color:'#1565C0', colorClass:'sc-objednano',   icon:'📦', filter:'Objednáno',         tab:'pozadavky'},
     {label:'K realizaci',       number:sc['K realizaci']||0,color:'#00838F',colorClass:'sc-teal',   icon:'🔧', filter:'K realizaci',       tab:'pozadavky'},
     {label:'V realizaci',          number:(sc['V realizaci']||0)+(sc['Zahájeno']||0),  color:'#2E7D32', colorClass:'sc-green', icon:'🔨', filter:'V realizaci',          tab:'pozadavky'},
+    {label:'Dokončeno',         number:sc['Dokončeno']||0, color:'#1a1a1a', colorClass:'sc-dark',   icon:'🏁', filter:'Dokončeno',         tab:'pozadavky'},
     {label:'Odloženo',          number:sc['Odloženo']||0,  color:'#78909C', colorClass:'sc-gray',   icon:'⏸️', filter:'Odloženo',          tab:'pozadavky'},
     {label:'Stornováno',        number:stor.length,        color:'#991b1b', colorClass:'sc-red',    icon:'❌', filter:null,               tab:'stornovane', separator:true},
-    {label:'Vyfakturováno',     number:vyf.length,         color:'#16a34a', colorClass:'sc-green',  icon:'✅', filter:null,               tab:'vyfakturovane'},
+    {label:'Vyfakturováno',     number:vyf.length,         color:'#388E3C', colorClass:'sc-vyfakt',  icon:'✅', filter:null,               tab:'vyfakturovane'},
     {label:'Fin. objem CN',     number:formatCastkaTxt(totalCNaktivni), color:'#7c3aed', colorClass:'sc-purple', icon:'💰', filter:null, tab:'pozadavky', wide:true},
   ];
   document.getElementById('stats').innerHTML = cards.map((s,i) => {
@@ -3079,7 +3085,7 @@ function renderDashboard() {
     const stavColors = {
       'Nacenit':'#F5C400','Prohlídka':'#6A1B9A','Objednáno':'#1565C0',
       'Zahájeno':'#2E7D32','V realizaci':'#2E7D32','Odeslán rozpočet':'#E65100','Reklamace':'#C62828',
-      'K realizaci':'#00838F','Vyfakturováno':'#388E3C','Odloženo':'#78909C','Stornováno':'#D32F2F'
+      'K realizaci':'#00838F','Vyfakturováno':'#388E3C','Odloženo':'#78909C','Stornováno':'#D32F2F','Dokončeno':'#1a1a1a'
     };
     const stavBgColors = stavyLabels.map(k => stavColors[k] || '#888');
     const totalPozPocet = stavyLabels.reduce((s,k) => s + sc[k], 0);
@@ -3183,13 +3189,13 @@ function formatCastkaTxt(num) {
 // === KANBAN ===
 // ============================================================
 const KANBAN_STAVY = [
-  {stav:'Nacenit',color:'#ca8a04',bg:'#fef9c3'},
-  {stav:'Prohlídka',color:'#7c3aed',bg:'#ede9fe'},
-  {stav:'Objednáno',color:'#1f3864',bg:'#dbeafe'},
-  {stav:'V realizaci',color:'#2E7D32',bg:'#dcfce7'},
-  {stav:'Odeslán rozpočet',color:'#d97706',bg:'#fef3c7'},
-  {stav:'Reklamace',color:'#dc2626',bg:'#fee2e2'},
-  {stav:'K realizaci',color:'#475569',bg:'#f1f5f9'},
+  {stav:'Nacenit',color:'#5a3d00',bg:'#F5C400'},
+  {stav:'Prohlídka',color:'#fff',bg:'#6A1B9A'},
+  {stav:'Objednáno',color:'#fff',bg:'#1565C0'},
+  {stav:'V realizaci',color:'#fff',bg:'#2E7D32'},
+  {stav:'Odeslán rozpočet',color:'#fff',bg:'#E65100'},
+  {stav:'Reklamace',color:'#fff',bg:'#C62828'},
+  {stav:'K realizaci',color:'#fff',bg:'#00838F'},
 ];
 function renderKanban() {
   const panel = document.getElementById('panel-kanban');
