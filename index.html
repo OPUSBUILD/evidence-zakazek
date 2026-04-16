@@ -162,8 +162,8 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
 .pt td{border:1px solid #aaa;padding:3px 6px;font-size:10px;vertical-align:middle}
 .pt .lbl{color:#444;font-style:italic;width:130px}
 .pt .val{font-weight:600}
-.pt .sec{background:#f97316;color:white;font-weight:bold;text-align:center;font-size:10px;letter-spacing:0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.pt .sec2{background:#fed7aa;color:#7c2d12;font-weight:bold;text-align:center;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pt .sec{background:#D9D9D9;color:black;font-weight:bold;text-align:center;font-size:10px;letter-spacing:0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pt .sec2{background:#D9D9D9;color:black;font-weight:bold;text-align:center;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pt-text{font-size:9.5px;border:1px solid #aaa;padding:5px 8px;margin-top:3px;line-height:1.4}
 .podpisy{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:24px}
 .podpis-blok{text-align:center;font-size:9px}
@@ -259,8 +259,8 @@ tr[onclick]:hover td{background:#e8f3ff;transition:background 0.15s}
   body.tisk-hlavni .stav-select{-webkit-appearance:none!important;appearance:none!important;border:none!important;background:transparent!important;font-weight:600!important}
   .print-area{padding:10px!important}
   .proto-editable{border-bottom:1px solid #aaa!important;background:transparent!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .pt .sec{background:#f97316!important;color:white!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  .pt .sec2{background:#fed7aa!important;color:#7c2d12!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .pt .sec{background:#D9D9D9!important;color:black!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .pt .sec2{background:#D9D9D9!important;color:black!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   #tisk-tabulky-area table th{background:#1f3864!important;color:white!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   th{background:#1f3864!important;color:white!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .stav,.s-Nacenit,.s-Prohlídka,.s-Objednáno,.s-Vrealizaci,.s-Odesl,.s-Reklamace,.s-Krealizaci,.s-Vyfakt,.s-Dokončeno{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -721,18 +721,21 @@ body.prihlasen #main-obsah { display: block; }
     <tr><td class="lbl">Název stavby:</td><td colspan="3" class="val" id="p-nazev"></td></tr>
     <tr><td class="lbl">Místo:</td><td colspan="3" class="val" id="p-misto"></td></tr>
     <tr><td class="lbl">Objednávka č.:</td><td class="val" id="p-objednavka"></td><td class="lbl">Náklady dle CN:</td><td class="val" id="p-castka-cn"></td></tr>
-    <tr><td class="lbl">Skutečná fakturace:</td><td class="val" id="p-castka-fak" style="color:#16a34a"></td><td class="lbl">Faktura č.:</td><td class="val" id="p-faktura"></td></tr></table>
+    <tr><td class="lbl">Skutečná fakturace:</td><td class="val" id="p-castka-fak" style="color:#CC0000;font-weight:700"></td><td class="lbl">Faktura č.:</td><td class="val" id="p-faktura"></td></tr></table>
     <table class="pt" style="margin-top:4px"><tr><td class="sec">SEZNAM PŘEDANÝCH DOKLADŮ OBJEDNATELI</td></tr>
     <tr><td><span class="proto-editable" contenteditable="true" data-placeholder="Vepište seznam předaných dokladů...">-</span></td></tr></table>
     <div class="pt-text" style="margin-top:6px">Prohlídkou bylo zjištěno, že práce jsou provedeny v souladu s požadavkem č. <strong id="p-pozadavek-text"></strong> a položkovým rozpočtem k objednávce <strong id="p-objednavka-text2"></strong>, pokud se někde provedení odlišuje, zjišťují strany souhlasně, že se tak stalo na základě vzájemné dohody a s jejich výslovným souhlasem.</div>
     <table class="pt" style="margin-top:6px"><tr><td class="sec2">VADY A DROBNÉ NEDODĚLKY</td></tr>
     <tr><td style="font-size:10px">Zhotovitel se zavazuje, že níže uvedené drobné vady a nedodělky budou odstraněny zhotovitelem a nebo jeho subdodavateli v uvedených termínech.</td></tr></table>
-    <table class="pt" style="margin-top:2px"><tr><td style="width:70%;font-weight:600;font-size:10px">VADA – NEDODĚLK</td><td style="font-weight:600;font-size:10px">Termín odstranění</td></tr>
+    <table class="pt" style="margin-top:2px"><tr><td style="width:70%;font-weight:600;font-size:10px">VADA – NEDODĚLEK</td><td style="font-weight:600;font-size:10px">Termín odstranění</td></tr>
     <tr><td><span class="proto-editable" contenteditable="true" data-placeholder="Popište vadu..."></span></td><td><span class="proto-editable" contenteditable="true" data-placeholder="dd.mm.rrrr"></span></td></tr>
     <tr><td><span class="proto-editable" contenteditable="true" data-placeholder="Další vada..."></span></td><td><span class="proto-editable" contenteditable="true" data-placeholder="dd.mm.rrrr"></span></td></tr></table>
     <div class="pt-text" style="margin-top:6px;text-align:center;font-size:10px">Odevzdání a převzetí dokončeného objektu je provedeno tímto zápisem mezi objednatelem (přejímající) a zhotovitelem (předávající)</div>
-    <table class="pt" style="margin-top:4px"><tr><td class="sec">ZÁRUKA ZA DÍLO</td></tr>
-    <tr><td style="font-size:10px"><span class="proto-editable" contenteditable="true">Délka záruční doby je stanovena v souladu Rámcovou dohodou ze dne 18.2.2026 ode dne předání díla či jeho ucelených částí.</span></td></tr></table>
+    <table class="pt" style="margin-top:4px"><tr><td class="sec" style="background:#00B0F0;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact">ZÁRUKA ZA DÍLO</td></tr></table>
+    <table class="pt" style="margin-top:0"><tr><td style="width:50%;font-weight:600;font-size:9px;background:#f2f2f2;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">Druh záruky</td><td style="width:15%;font-weight:600;font-size:9px;background:#f2f2f2;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">Délka</td><td style="font-weight:600;font-size:9px;background:#f2f2f2;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">Záruka do</td></tr>
+    <tr><td style="font-size:9px">Stavební a montážní práce</td><td style="text-align:center;font-weight:700;font-size:9px">36 měsíců</td><td style="text-align:center;font-weight:700;font-size:10px" id="p-zaruka-36-do"></td></tr>
+    <tr><td style="font-size:9px">Dodávky, materiál, výrobky a instalace</td><td style="text-align:center;font-weight:700;font-size:9px">24 měsíců</td><td style="text-align:center;font-weight:700;font-size:10px" id="p-zaruka-24-do"></td></tr></table>
+    <div style="font-size:7.5px;color:#666;margin-top:2px;padding-left:4px">Dle Rámcové dohody ze dne 18.2.2026, čl. VII, bod 7.2. Záruční doba běží ode dne předání díla předávacím protokolem.</div>
     <table class="pt" style="margin-top:4px"><tr><td colspan="2" class="sec">DATA PŘEJÍMACÍHO ŘÍZENÍ</td></tr>
     <tr><td>Přejímací řízení bylo zahájeno dne: <strong id="p-datum" class="proto-editable" contenteditable="true"></strong></td><td>a skončeno dne: <strong id="p-datum2" class="proto-editable" contenteditable="true"></strong></td></tr>
     <tr><td colspan="2" style="font-size:10px">Objednatel prohlašuje, že přejímá dílo včetně objektu - prostoru, kde bylo dílo prováděno a nemá vůči zhotoviteli jiných požadavků a nároků mimo shora uvedených.</td></tr></table>
@@ -741,7 +744,7 @@ body.prihlasen #main-obsah { display: block; }
       <div>V Brně dne <span class="proto-editable" contenteditable="true" data-placeholder="datum">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
       <div class="misto-podpis"></div>
       <div class="linka"></div>
-      <div style="font-size:9px;margin-top:2px">Za objednatele: <span class="proto-editable" contenteditable="true" data-placeholder="Jméno objednatele"></span></div>
+      <div style="font-size:9px;margin-top:2px">Za objednatele: <strong id="p-technik-podpis"></strong></div>
       <div style="font-size:9px;color:#555">technik správy, MČ Brno - Líšeň</div>
      </div>
      <div class="podpis-blok" style="position:relative">
@@ -2208,6 +2211,18 @@ function otevritProtokol(idx) {
   makeEdit(document.getElementById('p-datum'), dnes);
   makeEdit(document.getElementById('p-datum2'), dnes);
   makeEdit(document.getElementById('p-datum-podpis'), dnes);
+  // Auto-fill technik v podpisu
+  const techPodpis = document.getElementById('p-technik-podpis');
+  if (techPodpis) techPodpis.textContent = z.technik || '';
+  // Výpočet záručních lhůt (36 a 24 měsíců od data předání = dnes)
+  const dnesDt = new Date();
+  const z36 = new Date(dnesDt); z36.setMonth(z36.getMonth() + 36);
+  const z24 = new Date(dnesDt); z24.setMonth(z24.getMonth() + 24);
+  const fmtZar = d => d.toLocaleDateString('cs-CZ');
+  const el36 = document.getElementById('p-zaruka-36-do');
+  const el24 = document.getElementById('p-zaruka-24-do');
+  if (el36) el36.textContent = fmtZar(z36);
+  if (el24) el24.textContent = fmtZar(z24);
   const cn=parseCastka(z.castka), fak=parseCastka(z.castka_fak), rozdil=fak-cn;
   document.getElementById('fak-sub').textContent='Zakázka č. '+(z.pozadavek||'')+' | '+(z.adresa||'')+' | Technik: '+(z.technik||'');
   document.getElementById('fak-grid').innerHTML=`
