@@ -4448,9 +4448,6 @@ function openRozpocetPicker() {
     .setDeveloperKey(GOOGLE_API_KEY)
     .setOAuthToken(gdriveAccessToken)
     .addView(view)
-    .addView(new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setMimeTypes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel')
-      .setMode(google.picker.DocsViewMode.LIST))
     .setTitle('Vyberte rozpočet (Excel)')
     .setCallback(rozpocetPickerCallback)
     .build();
@@ -4488,17 +4485,21 @@ async function rozpocetPickerCallback(data) {
   }
 }
 
-// ── PARSOVÁNÍ ROZPOČTU ──
+// ── PARSOVÁNÍ ROZPOČTU (univerzální – zvládne oba formáty) ──
 function parseRozpocetWorkbook(wb) {
-  // Najdi list s položkami (obsahuje "Pol" v názvu)
-  let sheetName = wb.SheetNames.find(n => /pol/i.test(n)) || wb.SheetNames[wb.SheetNames.length - 1];
+  // Najdi správný list: preferuj list s "Pol" v názvu, jinak první/poslední
+  let sheetName = wb.SheetNames.find(n => /pol/i.test(n));
+  if (!sheetName) sheetName = wb.SheetNames.length === 1 ? wb.SheetNames[0] : wb.SheetNames[wb.SheetNames.length - 1];
   const ws = wb.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   
+  // Auto-detekce formátu: hledáme "#TypZaznamu#" v prvním řádku → formát RTS
+  const isRTSFormat = rows.some(r => String(r[r.length - 1] || '').includes('TypZaznamu') || String(r[r.length - 1] || '').trim() === 'DIL');
+  
   const result = [];
-  let currentDil = null;
   let currentItem = null;
   let itemCounter = 0;
+  let headerRowFound = false;
   
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -4507,26 +4508,55 @@ function parseRozpocetWorkbook(wb) {
     const col0 = String(row[0] || '').trim();
     const col1 = String(row[1] || '').trim();
     const col2 = String(row[2] || '').trim();
+    const col3 = String(row[3] || '').trim();
+    const col4raw = row[4];
+    const col4 = parseFloat(col4raw) || 0;
+    const lastCol = String(row[row.length - 1] || '').trim();
     
-    // Detekce DÍLU
-    const lastColValue = String(row[row.length - 1] || '').trim();
-    if (lastColValue === 'DIL' || (col0 === 'Díl:' || col0 === 'D\u00edl:')) {
-      const dilNum = col0 === 'Díl:' ? col1 : col0.replace('Díl:', '').trim() || col1;
-      const dilName = col0 === 'Díl:' ? col2 : col2;
-      currentDil = { type: 'dil', num: dilNum || col1, name: dilName || col2 };
-      result.push(currentDil);
+    // Přeskoč hlavičkový řádek (P.č., Číslo položky, Název...)
+    if (/^P\.č|^P\.Č|^Poř/i.test(col0) || /^Číslo položky/i.test(col1)) {
+      headerRowFound = true;
       continue;
     }
     
-    // Detekce POLOŽKY (číslo na začátku řádku + typ POL)
-    if (/^\d+$/.test(col0) && row.length > 5) {
+    // ── DETEKCE DÍLU ──
+    // Formát 1 (RTS): poslední sloupec = "DIL"
+    // Formát 2: col0 začíná "Díl:" nebo "Díl: XX"
+    const isDilRTS = lastCol === 'DIL';
+    const isDilSimple = /^Díl[:\s]/i.test(col0) || /^D[ií]l[:\s]/i.test(col0);
+    
+    if (isDilRTS || isDilSimple) {
+      let dilNum, dilName;
+      if (isDilSimple) {
+        // "Díl: 63" v col0, název v col1 nebo col2
+        const m = col0.match(/Díl[:\s]+(\S+)/i) || col0.match(/Dí?l[:\s]+(\S+)/i);
+        dilNum = m ? m[1] : col1;
+        dilName = col2 || col1;
+        if (dilNum === dilName) dilName = col2;
+      } else {
+        // RTS formát: "Díl:" v col0, číslo v col1, název v col2
+        dilNum = col0 === 'Díl:' ? col1 : col0.replace(/Díl:?/i, '').trim() || col1;
+        dilName = col2 || col1;
+      }
+      currentItem = null;
+      result.push({ type: 'dil', num: dilNum, name: dilName });
+      continue;
+    }
+    
+    // ── DETEKCE POLOŽKY ──
+    // Formát 1 (RTS): col0 je číslo, posl. sloupec obsahuje "POL"
+    // Formát 2: col0 je číslo (P.č.), col1 je kód, col2 je název, col3 je MJ
+    const isPOL_RTS = /^\d+$/.test(col0) && /^POL/.test(lastCol);
+    const isPOL_Simple = /^\d+$/.test(col0) && col1 && col2 && /^[a-zA-Z0-9]/.test(col1) && row.length >= 5;
+    
+    if (isPOL_RTS || isPOL_Simple) {
       const nazev = col2;
-      const mj = String(row[3] || '').trim();
-      const mnozstvi = parseFloat(row[4]) || 0;
+      const mj = col3;
+      const mnozstvi = col4;
       
-      // Kontrola filtru
-      if (isPLFiltered(nazev)) {
-        currentItem = null; // skip this item and its VV
+      // Kontrola filtru (název + typ položky v posledním sloupci)
+      if (isPLFiltered(nazev) || isPLFiltered(lastCol)) {
+        currentItem = null;
         continue;
       }
       
@@ -4543,18 +4573,31 @@ function parseRozpocetWorkbook(wb) {
       continue;
     }
     
-    // Detekce VÝKAZ VÝMĚR (VV řádky pod položkou)
-    if (currentItem && (lastColValue === 'VV' || /^VV/.test(lastColValue))) {
+    // ── DETEKCE VÝKAZ VÝMĚR (VV) ──
+    // Formát 1 (RTS): poslední sloupec = "VV" nebo začíná "VV"
+    // Formát 2: col0 prázdný, col1 prázdný, col2 má text (popis měření)
+    const isVV_RTS = currentItem && (lastCol === 'VV' || /^VV/.test(lastCol));
+    const isVV_Simple = currentItem && !col0 && !col1 && col2 && col2.length > 1 && !/^Nanesení|^S tmelením|^včetně|^podlah\s/i.test(col2) === false;
+    // Jednodušší: pokud col0 a col1 jsou prázdné a col2 má text a existuje currentItem
+    const isVV = currentItem && !col0 && !col1 && col2 && col2.length > 1;
+    
+    if (isVV_RTS || isVV) {
       const vvText = col2 || col1;
-      const vvMnozstvi = parseFloat(row[4]) || null;
+      const vvMnozstvi = col4 || null;
       if (vvText && vvText.trim()) {
-        currentItem.vv.push({ text: vvText.trim(), mnozstvi: vvMnozstvi });
+        // Rozliš VV (s množstvím) od POP (popis bez množství)
+        if (vvMnozstvi) {
+          currentItem.vv.push({ text: vvText.trim(), mnozstvi: vvMnozstvi });
+        } else {
+          // Popis – přidej jako poznámku
+          currentItem.poznamka = (currentItem.poznamka || '') + vvText.trim() + ' ';
+        }
       }
       continue;
     }
     
-    // POP řádky (popisy) – přidáme jako poznámku k položce
-    if (currentItem && (lastColValue === 'POP')) {
+    // ── POP řádky (RTS formát) ──
+    if (currentItem && lastCol === 'POP') {
       const popText = col2 || col1;
       if (popText && popText.trim()) {
         currentItem.poznamka = (currentItem.poznamka || '') + popText.trim() + ' ';
@@ -4637,7 +4680,6 @@ function openPhotoPicker() {
     .setAppId(GOOGLE_APP_ID)
     .setDeveloperKey(GOOGLE_API_KEY)
     .setOAuthToken(gdriveAccessToken)
-    .addView(view)
     .addView(new google.picker.DocsView(google.picker.ViewId.DOCS)
       .setMimeTypes('image/jpeg,image/png,image/webp,image/gif')
       .setMode(google.picker.DocsViewMode.GRID))
@@ -4709,36 +4751,46 @@ zobrazitDetail = function(idx) {
     const panel = document.getElementById('pracovni-list-panel');
     if (panel) {
       panel.style.display = 'block';
-      // Reset fotek pro nový detail
-      plPhotos = [];
-      renderPLPhotos();
-      document.getElementById('pl-table-area').innerHTML = '';
-      document.getElementById('pl-btn-rozpocet').classList.remove('pl-btn-active');
-      document.getElementById('pl-btn-rozpocet').innerHTML = '📂 Načíst rozpočet';
-      document.getElementById('pl-btn-rozpocet').disabled = !gdriveAccessToken;
-      document.getElementById('pl-btn-photos').disabled = !gdriveAccessToken;
+      resetPracovniListPanel();
       // Tlačítka v panelu musí být klikatelné (detail jinak zakáže vše)
-      panel.querySelectorAll('button').forEach(b => { b.disabled = b.dataset.needsDrive === 'true' && !gdriveAccessToken; b.style.background = ''; b.style.cursor = ''; });
+      panel.querySelectorAll('button').forEach(b => { b.style.background = ''; b.style.cursor = ''; });
       document.getElementById('pl-btn-connect').disabled = false;
       document.getElementById('pl-btn-connect').style.cursor = 'pointer';
-      document.getElementById('pl-btn-connect').style.background = '';
-      if (gdriveAccessToken) updatePLButtons();
     }
   }, 150);
 };
 
-// Při otevření editace (openModal) schovat panel
+// Resetuje panel pracovního listu (fotky, rozpočet, tabulku)
+function resetPracovniListPanel() {
+  plPhotos = [];
+  const photosArea = document.getElementById('pl-photos-area');
+  if (photosArea) photosArea.innerHTML = '';
+  const photoCount = document.getElementById('pl-photo-count');
+  if (photoCount) photoCount.textContent = '(0/4)';
+  const tableArea = document.getElementById('pl-table-area');
+  if (tableArea) tableArea.innerHTML = '';
+  const btnRozpocet = document.getElementById('pl-btn-rozpocet');
+  if (btnRozpocet) {
+    btnRozpocet.classList.remove('pl-btn-active');
+    btnRozpocet.innerHTML = '📂 Načíst rozpočet';
+    btnRozpocet.disabled = !gdriveAccessToken;
+  }
+  const btnPhotos = document.getElementById('pl-btn-photos');
+  if (btnPhotos) btnPhotos.disabled = !gdriveAccessToken;
+  const btnConnect = document.getElementById('pl-btn-connect');
+  if (btnConnect) { btnConnect.disabled = false; btnConnect.style.cursor = 'pointer'; btnConnect.style.background = ''; }
+  if (gdriveAccessToken) updatePLButtons();
+}
+
+// Při otevření editace (openModal) resetovat panel
 const _originalOpenModal = openModal;
 openModal = function(idx) {
   _originalOpenModal(idx);
+  // Reset PO otevření modalu (aby se nepřepisovaly form fields)
+  resetPracovniListPanel();
   const panel = document.getElementById('pracovni-list-panel');
   if (panel) {
-    // V editačním modu panel viditelný ale bez dat
-    if (idx !== null) {
-      panel.style.display = 'block';
-    } else {
-      panel.style.display = 'none';
-    }
+    panel.style.display = idx !== null ? 'block' : 'none';
   }
 };
 
