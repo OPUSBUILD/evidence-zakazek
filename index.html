@@ -4485,58 +4485,73 @@ async function rozpocetPickerCallback(data) {
   }
 }
 
-// ── PARSOVÁNÍ ROZPOČTU (univerzální – zvládne oba formáty) ──
+// ── PARSOVÁNÍ ROZPOČTU (univerzální – detekce hlavičky) ──
 function parseRozpocetWorkbook(wb) {
-  // Najdi správný list: preferuj list s "Pol" v názvu, jinak první/poslední
+  // Najdi správný list
   let sheetName = wb.SheetNames.find(n => /pol/i.test(n));
   if (!sheetName) sheetName = wb.SheetNames.length === 1 ? wb.SheetNames[0] : wb.SheetNames[wb.SheetNames.length - 1];
   const ws = wb.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   
-  // Auto-detekce formátu: hledáme "#TypZaznamu#" v prvním řádku → formát RTS
-  const isRTSFormat = rows.some(r => String(r[r.length - 1] || '').includes('TypZaznamu') || String(r[r.length - 1] || '').trim() === 'DIL');
+  // 1. NAJDI HLAVIČKOVÝ ŘÁDEK – hledej klíčová slova
+  let colNazev = -1, colMJ = -1, colMnozstvi = -1, headerRow = -1;
+  
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const row = rows[i];
+    if (!row) continue;
+    for (let j = 0; j < row.length; j++) {
+      const val = String(row[j] || '').trim().toLowerCase();
+      if (val.includes('název položky') || val === 'název') colNazev = j;
+      if (val === 'mj' || val === 'měrná jednotka') colMJ = j;
+      if (val === 'množství' || val.includes('množstv')) colMnozstvi = j;
+    }
+    if (colNazev >= 0 && colMJ >= 0 && colMnozstvi >= 0) {
+      headerRow = i;
+      break;
+    }
+  }
+  
+  // Fallback: pokud nenajde hlavičku, zkus standardní pozice
+  if (headerRow < 0) {
+    colNazev = 2; colMJ = 3; colMnozstvi = 4; headerRow = 0;
+  }
   
   const result = [];
   let currentItem = null;
   let itemCounter = 0;
-  let headerRowFound = false;
+  const mjPattern = /^(m2|m3|m|km|kus|ks|kpl|soubor|t|kg|l|%|hod|bm|páry?|sada|komplet)$/i;
   
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = headerRow + 1; i < rows.length; i++) {
     const row = rows[i];
-    if (!row || row.length < 2) continue;
+    if (!row || row.length < 3) continue;
     
     const col0 = String(row[0] || '').trim();
-    const col1 = String(row[1] || '').trim();
-    const col2 = String(row[2] || '').trim();
-    const col3 = String(row[3] || '').trim();
-    const col4raw = row[4];
-    const col4 = parseFloat(col4raw) || 0;
+    const nazev = String(row[colNazev] || '').trim();
+    const mj = String(row[colMJ] || '').trim();
+    const mnozstvi = parseFloat(row[colMnozstvi]) || 0;
     const lastCol = String(row[row.length - 1] || '').trim();
     
-    // Přeskoč hlavičkový řádek (P.č., Číslo položky, Název...)
-    if (/^P\.č|^P\.Č|^Poř/i.test(col0) || /^Číslo položky/i.test(col1)) {
-      headerRowFound = true;
-      continue;
-    }
+    if (!nazev && !col0) continue;
     
     // ── DETEKCE DÍLU ──
-    // Formát 1 (RTS): poslední sloupec = "DIL"
-    // Formát 2: col0 začíná "Díl:" nebo "Díl: XX"
+    const dilMatch = col0.match(/^D[ií]l[:\s:]+(.+)/i) || nazev.match(/^D[ií]l[:\s:]+(.+)/i);
     const isDilRTS = lastCol === 'DIL';
-    const isDilSimple = /^Díl[:\s]/i.test(col0) || /^D[ií]l[:\s]/i.test(col0);
     
-    if (isDilRTS || isDilSimple) {
+    if (dilMatch || isDilRTS) {
       let dilNum, dilName;
-      if (isDilSimple) {
-        // "Díl: 63" v col0, název v col1 nebo col2
-        const m = col0.match(/Díl[:\s]+(\S+)/i) || col0.match(/Dí?l[:\s]+(\S+)/i);
-        dilNum = m ? m[1] : col1;
-        dilName = col2 || col1;
-        if (dilNum === dilName) dilName = col2;
+      if (dilMatch) {
+        const parts = dilMatch[1].trim().split(/\s+/);
+        dilNum = parts[0];
+        dilName = nazev || parts.slice(1).join(' ');
+        if (dilName === dilNum || !dilName) {
+          for (let j = 1; j < Math.min(row.length, 8); j++) {
+            const v = String(row[j] || '').trim();
+            if (v && v !== dilNum && v.length > 2) { dilName = v; break; }
+          }
+        }
       } else {
-        // RTS formát: "Díl:" v col0, číslo v col1, název v col2
-        dilNum = col0 === 'Díl:' ? col1 : col0.replace(/Díl:?/i, '').trim() || col1;
-        dilName = col2 || col1;
+        dilNum = String(row[1] || '').trim();
+        dilName = String(row[2] || '').trim();
       }
       currentItem = null;
       result.push({ type: 'dil', num: dilNum, name: dilName });
@@ -4544,17 +4559,10 @@ function parseRozpocetWorkbook(wb) {
     }
     
     // ── DETEKCE POLOŽKY ──
-    // Formát 1 (RTS): col0 je číslo, posl. sloupec obsahuje "POL"
-    // Formát 2: col0 je číslo (P.č.), col1 je kód, col2 je název, col3 je MJ
-    const isPOL_RTS = /^\d+$/.test(col0) && /^POL/.test(lastCol);
-    const isPOL_Simple = /^\d+$/.test(col0) && col1 && col2 && /^[a-zA-Z0-9]/.test(col1) && row.length >= 5;
+    const isItem = nazev && mjPattern.test(mj) && mnozstvi > 0;
+    const isItemRTS = /^\d+$/.test(col0) && /^POL/.test(lastCol);
     
-    if (isPOL_RTS || isPOL_Simple) {
-      const nazev = col2;
-      const mj = col3;
-      const mnozstvi = col4;
-      
-      // Kontrola filtru (název + typ položky v posledním sloupci)
+    if (isItem || isItemRTS) {
       if (isPLFiltered(nazev) || isPLFiltered(lastCol)) {
         currentItem = null;
         continue;
@@ -4573,34 +4581,23 @@ function parseRozpocetWorkbook(wb) {
       continue;
     }
     
-    // ── DETEKCE VÝKAZ VÝMĚR (VV) ──
-    // Formát 1 (RTS): poslední sloupec = "VV" nebo začíná "VV"
-    // Formát 2: col0 prázdný, col1 prázdný, col2 má text (popis měření)
-    const isVV_RTS = currentItem && (lastCol === 'VV' || /^VV/.test(lastCol));
-    const isVV_Simple = currentItem && !col0 && !col1 && col2 && col2.length > 1 && !/^Nanesení|^S tmelením|^včetně|^podlah\s/i.test(col2) === false;
-    // Jednodušší: pokud col0 a col1 jsou prázdné a col2 má text a existuje currentItem
-    const isVV = currentItem && !col0 && !col1 && col2 && col2.length > 1;
-    
-    if (isVV_RTS || isVV) {
-      const vvText = col2 || col1;
-      const vvMnozstvi = col4 || null;
-      if (vvText && vvText.trim()) {
-        // Rozliš VV (s množstvím) od POP (popis bez množství)
-        if (vvMnozstvi) {
-          currentItem.vv.push({ text: vvText.trim(), mnozstvi: vvMnozstvi });
+    // ── VV / POPIS ──
+    if (currentItem) {
+      const isVV_RTS = lastCol === 'VV' || /^VV/.test(lastCol);
+      const isVV = !mj && nazev && nazev.length > 1;
+      const isPOP = lastCol === 'POP';
+      
+      if (isVV_RTS || isVV) {
+        if (mnozstvi) {
+          currentItem.vv.push({ text: nazev, mnozstvi: mnozstvi });
         } else {
-          // Popis – přidej jako poznámku
-          currentItem.poznamka = (currentItem.poznamka || '') + vvText.trim() + ' ';
+          currentItem.poznamka = (currentItem.poznamka || '') + nazev + ' ';
         }
+        continue;
       }
-      continue;
-    }
-    
-    // ── POP řádky (RTS formát) ──
-    if (currentItem && lastCol === 'POP') {
-      const popText = col2 || col1;
-      if (popText && popText.trim()) {
-        currentItem.poznamka = (currentItem.poznamka || '') + popText.trim() + ' ';
+      if (isPOP && nazev) {
+        currentItem.poznamka = (currentItem.poznamka || '') + nazev + ' ';
+        continue;
       }
     }
   }
@@ -4680,9 +4677,7 @@ function openPhotoPicker() {
     .setAppId(GOOGLE_APP_ID)
     .setDeveloperKey(GOOGLE_API_KEY)
     .setOAuthToken(gdriveAccessToken)
-    .addView(new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setMimeTypes('image/jpeg,image/png,image/webp,image/gif')
-      .setMode(google.picker.DocsViewMode.GRID))
+    .addView(view)
     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
     .setTitle('Vyberte fotky (max ' + remaining + ')')
     .setCallback(photoPickerCallback)
