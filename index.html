@@ -2198,43 +2198,10 @@ function saveZakazka() {
   if (editIndex!==null) {
     // Při ukládání existující zakázky - potvrdit
     const orig = source[editIndex];
-    // Detekce změny stavu, která vyžaduje přesun mezi poli
-    const finalniStavy = ['Dokončeno', 'Vyfakturováno'];
-    const byloVeVyf = currentTab === 'vyfakturovane';
-    const maBytVeVyf = finalniStavy.includes(z.stav);
-    const presunPozPotrebny = byloVeVyf !== maBytVeVyf;
-    const idxToSplice = editIndex; // uzamknout hodnotu pro callback
     showConfirm(
       '💾 Uložit změny?',
-      presunPozPotrebny
-        ? `Uložit změny v zakázce "${orig.popis||orig.adresa}"?\n\n⚠️ Změnou stavu na "${z.stav}" bude zakázka přesunuta ${byloVeVyf?'zpět do Požadavků':'do Vyfakturovaných'}.`
-        : `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
-      () => {
-        z.id=orig.id; z.akce=orig.akce||[]; z.histoire=orig.histoire||[];
-        if (byloVeVyf && !maBytVeVyf) {
-          // Vyfakturované → Požadavky
-          sledovatZmenu(z, `Vrácena z Vyfakturovaných do Požadavků (stav: ${z.stav})`, z.stav);
-          data.pozadavky.push(z);
-          data.vyfakturovane.splice(idxToSplice,1);
-          currentTab = 'pozadavky';
-          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-          document.getElementById('tab-poz').classList.add('active');
-          showToast('↩️ Zakázka vrácena do Požadavků!', true);
-        } else if (!byloVeVyf && maBytVeVyf) {
-          // Požadavky → Vyfakturované
-          sledovatZmenu(z, `Přesunuta do Vyfakturovaných (stav: ${z.stav})`, z.stav);
-          data.vyfakturovane.push(z);
-          data.pozadavky.splice(idxToSplice,1);
-          currentTab = 'vyfakturovane';
-          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-          document.getElementById('tab-vyf').classList.add('active');
-          showToast('✅ Zakázka přesunuta do Vyfakturovaných!', true);
-        } else {
-          source[idxToSplice] = z;
-          showToast('✅ Zakázka uložena!',true);
-        }
-        saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); zvyraznitPosledniRadek();
-      }
+      `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
+      () => { z.id=orig.id; z.akce=orig.akce||[]; z.histoire=orig.histoire||[]; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
     );
   } else {
     data.pozadavky.push(z);
