@@ -1281,7 +1281,20 @@ function setSort(col) {
 }
 
 function sortRows(rows) {
-  if (!sortCol) return rows;
+  if (!sortCol) {
+    // Výchozí řazení ve Vyfakturovaných: nejnovější faktura nahoru (číslo faktury sestupně)
+    if (currentTab === 'vyfakturovane') {
+      return [...rows].sort((a, b) => {
+        const fa = (a.faktura || '').toString().trim();
+        const fb = (b.faktura || '').toString().trim();
+        if (!fa && !fb) return 0;
+        if (!fa) return 1;   // bez čísla faktury jde dolů
+        if (!fb) return -1;
+        return fb.localeCompare(fa, 'cs', {numeric: true});
+      });
+    }
+    return rows;
+  }
   return [...rows].sort((a, b) => {
     let va = a[sortCol] || '';
     let vb = b[sortCol] || '';
@@ -1394,13 +1407,14 @@ function renderTable() {
         <td style="white-space:nowrap">${z.technik||''}</td>
         <td style="text-align:right;font-weight:600;color:#555;width:110px;font-size:12px">${z.castka||''}</td>
         <td style="text-align:right;font-weight:700;color:#16a34a;width:110px;font-size:12px">${z.castka_fak||''}</td>
-        <td><span class="stav s-Dokončeno">Dokončeno</span></td>
+        <td><span class="stav ${getStavClass(z.stav||'Dokončeno')}">${z.stav||'Dokončeno'}</span></td>
         <td style="font-weight:700;color:#1f3864">${z.faktura||''}</td>
         <td style="font-size:12px;color:#555;min-width:180px;max-width:240px;white-space:pre-line">${z.kontakty||''}</td>
         <td><div class="row-actions">
           ${z.drive_url?`<a href="${extractDriveUrl(z.drive_url)}" target="_blank" class="drive-link-btn" title="Otevřít složku na Google Drive" onclick="event.stopPropagation()">📁</a>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-sm btn-akce" onclick="otevritAkceModal(${idx},'vyfakturovane');event.stopPropagation()" title="Naplánované akce" style="padding:3px 6px;font-size:11px">📅${(z.akce&&z.akce.length)?` ${z.akce.length}`:''}</button>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-protokol btn-sm" onclick="otevritProtokol(${idx})" title="Protokol+Faktura">📄</button>`:''}
+          ${aktualniRole!=='technik'?`<button class="btn btn-sm" style="background:#0c447c;color:white;padding:3px 6px;font-size:11px" onclick="vratitDoPozadavku(${idx});event.stopPropagation()" title="Vrátit zpět do Požadavků">↩️</button>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-danger btn-sm" onclick="deleteZakazka(${idx})" title="Smazat">🗑️</button>`:''}
         </div></td></tr>`;}).join('')}
       </tbody><tfoot><tr>
@@ -1494,6 +1508,22 @@ function obnovitZakazku(idx) {
     data.stornovane.splice(idx,1);
     saveData(); renderTable(); showToast('✅ Zakázka obnovena!', true);
   });
+}
+
+function vratitDoPozadavku(idx) {
+  const z = data.vyfakturovane[idx];
+  showConfirm(
+    '↩️ Vrátit zakázku do Požadavků?',
+    `Zakázka "${z.popis||z.adresa}" (${z.adresa}) bude přesunuta zpět do záložky Požadavky.\n\nFakturační údaje (částka, číslo faktury) zůstanou zachovány. Stav bude nastaven na "K realizaci" - po vrácení můžeš stav upravit přes editaci.\n\nPokračovat?`,
+    () => {
+      const puvodniStav = z.stav;
+      z.stav = 'K realizaci';
+      sledovatZmenu(z, `Vrácena z Vyfakturovaných (stav: ${puvodniStav} → K realizaci)`, 'K realizaci');
+      data.pozadavky.push({...z});
+      data.vyfakturovane.splice(idx,1);
+      saveData(); renderTable(); showToast('↩️ Zakázka vrácena do Požadavků!', true);
+    }
+  );
 }
 
 // ===== MODAL =====
@@ -2168,10 +2198,43 @@ function saveZakazka() {
   if (editIndex!==null) {
     // Při ukládání existující zakázky - potvrdit
     const orig = source[editIndex];
+    // Detekce změny stavu, která vyžaduje přesun mezi poli
+    const finalniStavy = ['Dokončeno', 'Vyfakturováno'];
+    const byloVeVyf = currentTab === 'vyfakturovane';
+    const maBytVeVyf = finalniStavy.includes(z.stav);
+    const presunPozPotrebny = byloVeVyf !== maBytVeVyf;
+    const idxToSplice = editIndex; // uzamknout hodnotu pro callback
     showConfirm(
       '💾 Uložit změny?',
-      `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
-      () => { z.id=orig.id; z.akce=orig.akce||[]; z.histoire=orig.histoire||[]; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
+      presunPozPotrebny
+        ? `Uložit změny v zakázce "${orig.popis||orig.adresa}"?\n\n⚠️ Změnou stavu na "${z.stav}" bude zakázka přesunuta ${byloVeVyf?'zpět do Požadavků':'do Vyfakturovaných'}.`
+        : `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
+      () => {
+        z.id=orig.id; z.akce=orig.akce||[]; z.histoire=orig.histoire||[];
+        if (byloVeVyf && !maBytVeVyf) {
+          // Vyfakturované → Požadavky
+          sledovatZmenu(z, `Vrácena z Vyfakturovaných do Požadavků (stav: ${z.stav})`, z.stav);
+          data.pozadavky.push(z);
+          data.vyfakturovane.splice(idxToSplice,1);
+          currentTab = 'pozadavky';
+          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+          document.getElementById('tab-poz').classList.add('active');
+          showToast('↩️ Zakázka vrácena do Požadavků!', true);
+        } else if (!byloVeVyf && maBytVeVyf) {
+          // Požadavky → Vyfakturované
+          sledovatZmenu(z, `Přesunuta do Vyfakturovaných (stav: ${z.stav})`, z.stav);
+          data.vyfakturovane.push(z);
+          data.pozadavky.splice(idxToSplice,1);
+          currentTab = 'vyfakturovane';
+          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+          document.getElementById('tab-vyf').classList.add('active');
+          showToast('✅ Zakázka přesunuta do Vyfakturovaných!', true);
+        } else {
+          source[idxToSplice] = z;
+          showToast('✅ Zakázka uložena!',true);
+        }
+        saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); zvyraznitPosledniRadek();
+      }
     );
   } else {
     data.pozadavky.push(z);
