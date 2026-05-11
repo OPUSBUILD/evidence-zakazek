@@ -1217,6 +1217,7 @@ function clickStat(filter, tab, idx) {
   skrytExtravPanely();
   const zpet = document.getElementById('zpet-btn');
   if (zpet) zpet.remove();
+  sortCol=''; sortDir=1;  // reset ručního řazení - každá záložka má vlastní výchozí
   // Vymazat vyhledávání a ostatní filtry
   document.getElementById('search').value = '';
   document.getElementById('filter-typ').value = '';
@@ -1242,6 +1243,7 @@ function clickStat(filter, tab, idx) {
 
 function switchTab(tab, el) {
   currentTab=tab; activeStatFilter=null;
+  sortCol=''; sortDir=1;  // reset ručního řazení - každá záložka má vlastní výchozí
   selectedIdx = null;
   document.querySelectorAll('tr.row-selected').forEach(r => r.classList.remove('row-selected'));
   currentView='table';
@@ -1291,6 +1293,17 @@ function sortRows(rows) {
         if (!fa) return 1;   // bez čísla faktury jde dolů
         if (!fb) return -1;
         return fb.localeCompare(fa, 'cs', {numeric: true});
+      });
+    }
+    // Výchozí řazení v Požadavcích: nejnovější číslo požadavku nahoru (sestupně)
+    if (currentTab === 'pozadavky') {
+      return [...rows].sort((a, b) => {
+        const pa = (a.pozadavek || '').toString().trim();
+        const pb = (b.pozadavek || '').toString().trim();
+        if (!pa && !pb) return 0;
+        if (!pa) return 1;   // bez čísla požadavku jde dolů
+        if (!pb) return -1;
+        return pb.localeCompare(pa, 'cs', {numeric: true});
       });
     }
     return rows;
