@@ -33,6 +33,34 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0f2f5;
 .sc-dark{background:#1a1a1a!important;border-left-color:#000!important}.sc-dark .number{color:#fff!important}.sc-dark .label{color:rgba(255,255,255,0.9)!important}
 .sc-objednano{background:#1565C0!important;border-left-color:#0D47A1!important}.sc-objednano .number{color:#fff!important}.sc-objednano .label{color:rgba(255,255,255,0.9)!important}
 .sc-vyfakt{background:#e2efda!important;border-left-color:#388E3C!important}.sc-vyfakt .number{color:#375623!important}.sc-vyfakt .label{color:#375623!important}
+/* === NOVÉ: amount-row, progress-bar, čerpání RS === */
+.stat-card .amount-row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:600;margin-top:1px;line-height:1.2;gap:6px}
+.stat-card .amount-row .pct{font-weight:700;flex-shrink:0}
+.stat-card .amount-empty{font-size:11px;opacity:0.5;font-weight:500;margin-top:1px}
+.stat-card .progress-bar{height:4px;background:rgba(255,255,255,0.28);border-radius:99px;margin-top:5px;overflow:hidden}
+.stat-card .progress-bar > div{height:100%;background:#fff;border-radius:99px;transition:width .35s ease}
+.stat-card .progress-bar.empty{visibility:hidden}
+/* Tmavá výplň progress baru u světlých karet */
+.sc-gold .progress-bar{background:rgba(0,0,0,0.13)}.sc-gold .progress-bar > div{background:#5a3d00}
+.sc-vyfakt .progress-bar{background:rgba(0,0,0,0.13)}.sc-vyfakt .progress-bar > div{background:#375623}
+.sc-red .progress-bar{background:rgba(0,0,0,0.13)}.sc-red .progress-bar > div{background:#991b1b}
+.sc-yellow .progress-bar{background:rgba(0,0,0,0.13)}.sc-yellow .progress-bar > div{background:#854d0e}
+/* Barvy textu amount-row pro jednotlivé karty */
+.sc-blue .amount-row,.sc-purple .amount-row,.sc-green .amount-row,.sc-teal .amount-row,.sc-gray .amount-row,.sc-violet .amount-row,.sc-deeporange .amount-row,.sc-dark .amount-row,.sc-objednano .amount-row{color:#fff!important}
+.sc-gold .amount-row{color:#5a3d00!important}
+.sc-vyfakt .amount-row{color:#375623!important}
+.sc-red .amount-row{color:#991b1b!important}
+.sc-yellow .amount-row{color:#854d0e!important}
+/* Karta Čerpání rámcové smlouvy - varianta C (kruhový graf) + varovné stavy */
+.sc-rs{background:#7c3aed!important;border-left-color:#5b21b6!important}
+.sc-rs .number,.sc-rs .label,.sc-rs .amount-row{color:#fff!important}
+.sc-rs .rs-circle{width:26px;height:26px;flex-shrink:0}
+.sc-rs .rs-circle .bg{stroke:rgba(255,255,255,0.28)}
+.sc-rs .rs-circle .fg{stroke:#fff;transition:stroke-dasharray .35s ease}
+.sc-rs-warn{background:#d97706!important;border-left-color:#92400e!important}
+.sc-rs-danger{background:#dc2626!important;border-left-color:#7f1d1d!important;animation:rsPulse 2s ease-in-out infinite}
+.sc-rs-critical{background:#7f1d1d!important;border-left-color:#dc2626!important;outline:2px solid #dc2626;outline-offset:-1px;animation:rsPulse 1s ease-in-out infinite}
+@keyframes rsPulse{0%,100%{box-shadow:0 1px 4px rgba(0,0,0,0.07)}50%{box-shadow:0 0 0 4px rgba(220,38,38,0.25)}}
 .tabs{display:flex;padding:0 24px;background:white;border-bottom:2px solid #e0e0e0;position:sticky;top:150px;z-index:97}
 .tab{padding:12px 24px;cursor:pointer;font-size:14px;font-weight:500;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.2s}
 .tab.active{color:#2e75b6;border-bottom-color:#2e75b6}
@@ -294,7 +322,7 @@ tr.row-last-edited:hover > td{background:#fef08a!important}
 .kanban-wrap{overflow-x:auto;padding-bottom:8px}
 .kanban-board{display:flex;gap:14px;min-width:800px}
 .kanban-col{background:#f1f5f9;border-radius:12px;padding:10px;min-width:190px;flex:1}
-.kanban-col-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:6px 10px;border-radius:8px;color:#fff;text-align:center}
+.kanban-col-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:7px 12px;border-radius:8px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .kanban-card{background:#fff;border-radius:8px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);font-size:12px;cursor:pointer;transition:box-shadow .2s;border-left:3px solid transparent}
 .kanban-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.18)}
 .kc-adresa{font-weight:700;color:#1f3864;margin-bottom:2px}
@@ -435,7 +463,7 @@ body.prihlasen #main-obsah { display: block; }
     <img src="data:image/png;base64,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" alt="OPUS BUILD" style="height:48px;width:48px;object-fit:contain;border-radius:6px">
     <div>
       <h1>Evidence zakázek 2026</h1>
-      <div class="header-sub" id="last-save">⏳ Připojuji se ke cloudu... · v2.2</div>
+      <div class="header-sub" id="last-save">⏳ Připojuji se ke cloudu... · v2.3</div>
     </div>
   </div>
   <div class="header-btns">
@@ -860,6 +888,12 @@ body.prihlasen #main-obsah { display: block; }
 </div><!-- /main-obsah -->
 <script>
 
+// === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
+const APP_VERSION = 'v2.3';
+
+// === RÁMCOVÁ SMLOUVA s MČ Brno-Líšeň === (celková hodnota bez DPH)
+const RS_HODNOTA = 23400000;
+
 const firebaseConfig = {
   apiKey: "AIzaSyDEpLS2ngdh8jY7SBWOKjgSHIJy6tTAxb4",
   authDomain: "opus-build.firebaseapp.com",
@@ -1049,7 +1083,7 @@ function loadData() {
       nacistDataZExcelu();
     }
     renderTable();
-    document.getElementById('last-save').textContent = '☁️ Načteno: ' + new Date().toLocaleTimeString('cs-CZ') + ' · v2.2';
+    document.getElementById('last-save').textContent = '☁️ Načteno: ' + new Date().toLocaleTimeString('cs-CZ') + ' · ' + APP_VERSION;
     setTimeout(zkontrolujProsleTerm, 1200);
     // Auto-odeslání denního souhrnu (jen jednou denně, jen pro správce/přípravu)
     setTimeout(() => {
@@ -1071,7 +1105,7 @@ function loadData() {
             if (!data.stornovane) data.stornovane = [];
             migrujData();
             renderTable();
-            document.getElementById('last-save').textContent = '🔄 Synchronizováno: ' + new Date().toLocaleTimeString('cs-CZ') + ' · v2.2';
+            document.getElementById('last-save').textContent = '🔄 Synchronizováno: ' + new Date().toLocaleTimeString('cs-CZ') + ' · ' + APP_VERSION;
           }
         }
       }, err => {
@@ -1183,30 +1217,101 @@ function renderStats() {
   const poz = data.pozadavky;
   const vyf = [...data.vyfakturovane].reverse();
   const stor = data.stornovane;
+
+  // Počty zakázek podle stavu (aktivní)
   const sc = {};
   poz.forEach(z => { sc[z.stav]=(sc[z.stav]||0)+1; });
-  const totalCNaktivni = poz.reduce((s,z)=>s+parseCastka(z.castka),0);
+
+  // Finanční objem podle stavu (aktivní) - jen kde je castka > 0
+  const so = {};
+  poz.forEach(z => {
+    const c = parseCastka(z.castka);
+    if (c > 0) so[z.stav] = (so[z.stav]||0) + c;
+  });
+
+  // Celkové součty
+  const totalCNaktivni = Object.values(so).reduce((a,b) => a+b, 0);
+  const totalVyfakt = vyf.reduce((s,z) => s + parseCastka(z.castka_fak || z.castka), 0);
+  const totalRScerpani = totalCNaktivni + totalVyfakt;
+
+  // Procenta
+  const rsPct = RS_HODNOTA > 0 ? Math.round(totalRScerpani / RS_HODNOTA * 100) : 0;
+  const vyfPct = totalRScerpani > 0 ? Math.round(totalVyfakt / totalRScerpani * 100) : 0;
+  const phasePct = (stav) => {
+    const amt = so[stav] || 0;
+    return totalCNaktivni > 0 && amt > 0 ? Math.round(amt / totalCNaktivni * 100) : 0;
+  };
+
+  // V realizaci zahrnuje i staré 'Zahájeno'
+  const vrAmount = (so['V realizaci']||0) + (so['Zahájeno']||0);
+  const vrPct = totalCNaktivni > 0 && vrAmount > 0 ? Math.round(vrAmount / totalCNaktivni * 100) : 0;
+
+  // Varovné stavy pro RS kartu: 0-70 normál, 70-85 warn, 85-95 danger, 95+ critical
+  let rsClass = 'sc-rs';
+  if (rsPct >= 95)       rsClass = 'sc-rs sc-rs-critical';
+  else if (rsPct >= 85)  rsClass = 'sc-rs sc-rs-danger';
+  else if (rsPct >= 70)  rsClass = 'sc-rs sc-rs-warn';
+
   const cards = [
-    {label:'Aktivní požadavky', number:poz.length,         color:'#2563eb', colorClass:'sc-blue',   icon:'📋', filter:null,               tab:'pozadavky', separator:true},
-    {label:'Nacenit',           number:sc['Nacenit']||0,   color:'#F5C400', colorClass:'sc-gold',   icon:'💡', filter:'Nacenit',           tab:'pozadavky'},
-    {label:'Prohlídka',         number:sc['Prohlídka']||0, color:'#6A1B9A', colorClass:'sc-violet', icon:'👁️', filter:'Prohlídka',         tab:'pozadavky'},
-    {label:'Odeslán rozpočet',  number:sc['Odeslán rozpočet']||0, color:'#E65100', colorClass:'sc-deeporange', icon:'📄', filter:'Odeslán rozpočet', tab:'pozadavky'},
-    {label:'Objednáno',         number:sc['Objednáno']||0, color:'#1565C0', colorClass:'sc-objednano',   icon:'📦', filter:'Objednáno',         tab:'pozadavky'},
-    {label:'K realizaci',       number:sc['K realizaci']||0,color:'#00838F',colorClass:'sc-teal',   icon:'🔧', filter:'K realizaci',       tab:'pozadavky'},
-    {label:'V realizaci',          number:(sc['V realizaci']||0)+(sc['Zahájeno']||0),  color:'#2E7D32', colorClass:'sc-green', icon:'🔨', filter:'V realizaci',          tab:'pozadavky'},
-    {label:'Dokončeno',         number:sc['Dokončeno']||0, color:'#1a1a1a', colorClass:'sc-dark',   icon:'🏁', filter:'Dokončeno',         tab:'pozadavky'},
-    {label:'Odloženo',          number:sc['Odloženo']||0,  color:'#78909C', colorClass:'sc-gray',   icon:'⏸️', filter:'Odloženo',          tab:'pozadavky'},
-    {label:'Stornováno',        number:stor.length,        color:'#991b1b', colorClass:'sc-red',    icon:'❌', filter:null,               tab:'stornovane', separator:true},
-    {label:'Vyfakturováno',     number:vyf.length,         color:'#388E3C', colorClass:'sc-vyfakt',  icon:'✅', filter:null,               tab:'vyfakturovane'},
-    {label:'Fin. objem CN',     number:formatCastkaTxt(totalCNaktivni), color:'#7c3aed', colorClass:'sc-purple', icon:'💰', filter:null, tab:'pozadavky', wide:true},
+    {label:'Aktivní požadavky', number:poz.length,                       amount:totalCNaktivni, pct:totalCNaktivni>0?100:0, color:'#2563eb', colorClass:'sc-blue',       icon:'📋', filter:null,             tab:'pozadavky', separator:true},
+    {label:'Nacenit',           number:sc['Nacenit']||0,                 noAmount:true, color:'#F5C400', colorClass:'sc-gold',                icon:'💡', filter:'Nacenit',         tab:'pozadavky'},
+    {label:'Prohlídka',         number:sc['Prohlídka']||0,               noAmount:true, color:'#6A1B9A', colorClass:'sc-violet',              icon:'👁️', filter:'Prohlídka',       tab:'pozadavky'},
+    {label:'Odeslán rozpočet',  number:sc['Odeslán rozpočet']||0,        amount:so['Odeslán rozpočet']||0, pct:phasePct('Odeslán rozpočet'),  color:'#E65100', colorClass:'sc-deeporange',  icon:'📄', filter:'Odeslán rozpočet', tab:'pozadavky'},
+    {label:'Objednáno',         number:sc['Objednáno']||0,               amount:so['Objednáno']||0, pct:phasePct('Objednáno'),                color:'#1565C0', colorClass:'sc-objednano',   icon:'📦', filter:'Objednáno',         tab:'pozadavky'},
+    {label:'K realizaci',       number:sc['K realizaci']||0,             amount:so['K realizaci']||0, pct:phasePct('K realizaci'),            color:'#00838F', colorClass:'sc-teal',        icon:'🔧', filter:'K realizaci',       tab:'pozadavky'},
+    {label:'V realizaci',       number:(sc['V realizaci']||0)+(sc['Zahájeno']||0), amount:vrAmount, pct:vrPct,                               color:'#2E7D32', colorClass:'sc-green',       icon:'🔨', filter:'V realizaci',       tab:'pozadavky'},
+    {label:'Dokončeno',         number:sc['Dokončeno']||0,               amount:so['Dokončeno']||0, pct:phasePct('Dokončeno'),                color:'#1a1a1a', colorClass:'sc-dark',        icon:'🏁', filter:'Dokončeno',         tab:'pozadavky'},
+    {label:'Odloženo',          number:sc['Odloženo']||0,                amount:so['Odloženo']||0, pct:phasePct('Odloženo'),                  color:'#78909C', colorClass:'sc-gray',        icon:'⏸️', filter:'Odloženo',         tab:'pozadavky'},
+    {label:'Stornováno',        number:stor.length,                      noAmount:true, color:'#991b1b', colorClass:'sc-red',                  icon:'❌', filter:null,             tab:'stornovane', separator:true},
+    {label:'Vyfakturováno',     number:vyf.length,                       amount:totalVyfakt, pct:vyfPct,                                       color:'#388E3C', colorClass:'sc-vyfakt',      icon:'✅', filter:null,             tab:'vyfakturovane'},
+    {label:'Čerpání RS',        number:rsPct+'%',                         amount:totalRScerpani, pct:rsPct, isRS:true,                          color:'#7c3aed', colorClass:rsClass,                  filter:null,             tab:'pozadavky', separator:true},
   ];
+
   document.getElementById('stats').innerHTML = cards.map((s,i) => {
     const isA = activeStatFilter===s.filter && s.filter!==null;
     const sep = s.separator ? 'border-left:3px solid #e0e0e0;margin-left:4px;padding-left:4px;' : '';
-    return `<div class="stat-card ${s.colorClass||''}${isA?' active-filter':''}" style="border-left-color:${s.color};${sep}${s.wide?'min-width:180px':''}" onclick="clickStat('${s.filter||''}','${s.tab}',${i})">
-      <div class="number">${s.icon} ${s.number}</div>
-      <div class="label">${s.label}</div></div>`;
+
+    // Top řádek: ikona+číslo NEBO SVG kruh+% (RS karta)
+    let topRow;
+    if (s.isRS) {
+      const dashLen = Math.min(Math.max(s.pct||0,0), 100);
+      topRow = `<div class="number" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <svg class="rs-circle" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+          <circle class="bg" cx="18" cy="18" r="15.9" fill="none" stroke-width="4"></circle>
+          <circle class="fg" cx="18" cy="18" r="15.9" fill="none" stroke-width="4" stroke-dasharray="${dashLen},100" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+        </svg>
+        <span>${s.number}</span></div>`;
+    } else {
+      topRow = `<div class="number">${s.icon} ${s.number}</div>`;
+    }
+
+    // Amount + progress bar
+    let amtRow = '', barRow = '';
+    if (s.isRS) {
+      const milRS = (RS_HODNOTA/1e6).toFixed(1).replace('.',',');
+      amtRow = `<div class="amount-row"><span>${formatCastkaTxt(s.amount) || '0,00 Kč'}</span></div>
+                <div style="font-size:10px;opacity:0.85;margin-top:1px;font-weight:500">z ${milRS} mil. Kč</div>`;
+    } else if (s.noAmount) {
+      amtRow = `<div class="amount-empty">—</div>`;
+      barRow = `<div class="progress-bar empty"></div>`;
+    } else if ((s.amount||0) > 0) {
+      amtRow = `<div class="amount-row"><span>${formatCastkaTxt(s.amount)}</span><span class="pct">${s.pct}%</span></div>`;
+      const w = Math.min(Math.max(s.pct||0,0), 100);
+      barRow = `<div class="progress-bar"><div style="width:${w}%"></div></div>`;
+    } else {
+      amtRow = `<div class="amount-empty">—</div>`;
+      barRow = `<div class="progress-bar empty"></div>`;
+    }
+
+    const minW = s.isRS ? 'min-width:160px;' : 'min-width:135px;';
+    return `<div class="stat-card ${s.colorClass||''}${isA?' active-filter':''}" style="border-left-color:${s.color};${sep}${minW}" onclick="clickStat('${s.filter||''}','${s.tab}',${i})" title="${s.label}">
+      ${topRow}
+      <div class="label">${s.label}</div>
+      ${amtRow}
+      ${barRow}
+    </div>`;
   }).join('');
+
   document.getElementById('badge-poz').textContent = poz.length;
   document.getElementById('badge-vyf').textContent = vyf.length;
   document.getElementById('badge-stor').textContent = stor.length;
@@ -3246,38 +3351,67 @@ function formatCastkaTxt(num) {
 // ============================================================
 // === KANBAN ===
 // ============================================================
+// short = zkrácený popisek (vejde se do úzkého sloupce)
+// text = barva textu, bg = barva pozadí hlavičky
+// source = z jakého data pole brát karty (pozadavky/vyfakturovane/stornovane)
 const KANBAN_STAVY = [
-  {stav:'Nacenit',color:'#5a3d00',bg:'#F5C400'},
-  {stav:'Prohlídka',color:'#fff',bg:'#6A1B9A'},
-  {stav:'Objednáno',color:'#fff',bg:'#1565C0'},
-  {stav:'V realizaci',color:'#fff',bg:'#2E7D32'},
-  {stav:'Odeslán rozpočet',color:'#fff',bg:'#E65100'},
-  {stav:'Reklamace',color:'#fff',bg:'#C62828'},
-  {stav:'K realizaci',color:'#fff',bg:'#00838F'},
+  {stav:'Nacenit',          short:'NACENIT',     text:'#5a3d00', bg:'#F5C400', source:'pozadavky'},
+  {stav:'Prohlídka',        short:'PROHLÍDKA',   text:'#fff',    bg:'#6A1B9A', source:'pozadavky'},
+  {stav:'Odeslán rozpočet', short:'ODESLÁNO',    text:'#fff',    bg:'#E65100', source:'pozadavky'},
+  {stav:'Objednáno',        short:'OBJEDNÁNO',   text:'#fff',    bg:'#1565C0', source:'pozadavky'},
+  {stav:'Reklamace',        short:'REKLAMACE',   text:'#fff',    bg:'#C62828', source:'pozadavky'},
+  {stav:'K realizaci',      short:'K REAL.',     text:'#fff',    bg:'#00838F', source:'pozadavky'},
+  {stav:'V realizaci',      short:'V REAL.',     text:'#fff',    bg:'#2E7D32', source:'pozadavky'},
+  {stav:'Dokončeno',        short:'DOKONČENO',   text:'#fff',    bg:'#1a1a1a', source:'pozadavky'},
+  {stav:'Odloženo',         short:'ODLOŽENO',    text:'#fff',    bg:'#78909C', source:'pozadavky'},
+  {stav:'Stornováno',       short:'STORNO',      text:'#991b1b', bg:'#fee2e2', source:'stornovane'},
+  {stav:'Vyfakturováno',    short:'VYFAKT.',     text:'#375623', bg:'#e2efda', source:'vyfakturovane'},
 ];
+
 function renderKanban() {
   const panel = document.getElementById('panel-kanban');
   panel.innerHTML = `
     <h2 style="font-size:20px;font-weight:700;color:#1f3864;margin-bottom:16px">🗂️ Kanban board</h2>
     <div class="kanban-wrap"><div class="kanban-board">
       ${KANBAN_STAVY.map(ks => {
-        const karty = data.pozadavky.filter(z => z.stav === ks.stav);
+        // Vyber data podle source
+        let karty, sourceArr;
+        if (ks.source === 'vyfakturovane') {
+          karty = data.vyfakturovane;
+          sourceArr = data.vyfakturovane;
+        } else if (ks.source === 'stornovane') {
+          karty = data.stornovane;
+          sourceArr = data.stornovane;
+        } else {
+          // pozadavky - filtrované podle stavu (Zahájeno se mapuje na V realizaci kvůli migraci)
+          karty = data.pozadavky.filter(z => z.stav === ks.stav || (ks.stav === 'V realizaci' && z.stav === 'Zahájeno'));
+          sourceArr = data.pozadavky;
+        }
         return `<div class="kanban-col">
-          <div class="kanban-col-hdr" style="background:${ks.color}">${ks.stav} <span class="kanban-count">${karty.length}</span></div>
+          <div class="kanban-col-hdr" style="background:${ks.bg};color:${ks.text}"><span>${ks.short}</span><span class="kanban-count">${karty.length}</span></div>
           ${karty.map(z => {
-            const idx = data.pozadavky.indexOf(z);
+            const idx = sourceArr.indexOf(z);
             const tc = isTerminProsly(z.termin) ? 'color:#dc2626' : isTerminBlizko(z.termin) ? 'color:#f97316' : 'color:#888';
-            return `<div class="kanban-card" style="border-left-color:${ks.color}" onclick="editZakazka(${idx})">
+            const dispCastka = z.castka_fak || z.castka;
+            return `<div class="kanban-card" style="border-left-color:${ks.bg}" onclick="editKanbanCard(${idx},'${ks.source}')">
               <div class="kc-adresa">${z.adresa||'–'} ${z.byt?'č.'+z.byt:''}</div>
               <div class="kc-popis" title="${(z.popis||'').replace(/"/g,'&quot;')}">${z.popis||'(bez popisu)'}</div>
               <div class="kc-technik">👷 ${z.technik||'–'}</div>
               ${z.termin ? `<div class="kc-termin" style="${tc}">📅 ${formatDatum(z.termin)}${isTerminProsly(z.termin)?' ⚠️':''}</div>` : ''}
-              ${z.castka ? `<div style="font-size:10px;color:#16a34a;margin-top:2px">💰 ${z.castka}</div>` : ''}
+              ${dispCastka ? `<div style="font-size:10px;color:#16a34a;margin-top:2px">💰 ${dispCastka}</div>` : ''}
             </div>`;
           }).join('')}
         </div>`;
       }).join('')}
     </div></div>`;
+}
+
+// Helper: kliknutí na kartu v Kanbanu - správně nastaví currentTab podle source
+function editKanbanCard(idx, source) {
+  if (source === 'vyfakturovane') currentTab = 'vyfakturovane';
+  else if (source === 'stornovane') currentTab = 'stornovane';
+  else currentTab = 'pozadavky';
+  editZakazka(idx);
 }
 
 // ============================================================
