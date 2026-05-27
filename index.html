@@ -918,7 +918,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v2.8';
+const APP_VERSION = 'v2.9';
 
 // === RÁMCOVÁ SMLOUVA s MČ Brno-Líšeň === (celková hodnota bez DPH)
 const RS_HODNOTA = 23400000;
@@ -3148,7 +3148,7 @@ function zobrazitProsleTerm() {
 function skrytExtravPanely() {
   document.querySelector('.table-wrap').style.display = 'block';
   document.querySelector('.filters').style.display = 'flex';
-  ['dashboard','kanban','kalendar','adresy','technici','vykaz','terminy'].forEach(v => {
+  ['dashboard','kanban','kalendar','adresy','technici','vykaz','terminy','priority'].forEach(v => {
     const p = document.getElementById('panel-' + v);
     if (p) { p.classList.remove('show'); }
   });
