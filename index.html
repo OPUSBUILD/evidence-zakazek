@@ -313,6 +313,14 @@ tr.row-selected:hover > td{background:#bfdbfe!important}
 tr.row-last-edited > td{background:#fef9c3!important;border-left:4px solid #f59e0b!important;animation:rowPulse 1s ease-in-out 3}
 tr.row-last-edited:hover > td{background:#fef08a!important}
 
+/* === PRIORITA BADGES === */
+.prio-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:12px;font-weight:700;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.prio-1{background:#A32D2D}
+.prio-2{background:#854F0B}
+.prio-3{background:#0C447C}
+.prio-none{color:#bbb;font-weight:400;font-size:14px}
+.prio-tab-badge{background:#A32D2D;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;font-weight:600}
+
 /* === TERMIN ALERT BANNER === */
 #termin-alert{display:none;background:#fff0f0;border-bottom:3px solid #dc2626;padding:10px 24px;align-items:center;justify-content:space-between;gap:12px;position:relative;z-index:99}
 #termin-alert.show{display:flex}
@@ -523,6 +531,7 @@ body.prihlasen #main-obsah { display: block; }
   <div class="tab" id="tab-technici" onclick="switchView('technici',this)">👷 Technici</div>
   <div class="tab" id="tab-vykaz" onclick="switchView('vykaz',this)">📄 Výkaz</div>
   <div class="tab" id="tab-terminy" onclick="switchView('terminy',this)">⏰ Termíny</div>
+  <div class="tab" id="tab-priority" onclick="switchView('priority',this)">⭐ Priority <span class="prio-tab-badge" id="prio-tab-badge" style="display:none">0</span></div>
 </div>
 
 <div class="filters">
@@ -540,6 +549,14 @@ body.prihlasen #main-obsah { display: block; }
   </select>
   <select id="filter-technik" onchange="renderTable()"><option value="">Všichni technici</option></select>
   <select id="filter-adresa" onchange="renderTable()" style="min-width:140px"><option value="">Všechny adresy</option></select>
+  <select id="filter-priorita" onchange="renderTable()" style="min-width:130px">
+    <option value="">Všechny priority</option>
+    <option value="1">⭐ P1 — Vysoká</option>
+    <option value="2">⭐ P2 — Střední</option>
+    <option value="3">⭐ P3 — Nízká</option>
+    <option value="none">— Bez priority</option>
+    <option value="any">⭐ Pouze s prioritou</option>
+  </select>
   <button class="btn btn-gray" onclick="clearFilters()">✕ Zrušit filtry</button>
   <button class="btn btn-gray" onclick="toggleShortcuts()" title="Klávesové zkratky (?)">⌨️</button>
 </div>
@@ -553,6 +570,7 @@ body.prihlasen #main-obsah { display: block; }
 <div id="panel-technici" class="extra-panel"></div>
 <div id="panel-vykaz" class="extra-panel"></div>
 <div id="panel-terminy" class="extra-panel"></div>
+<div id="panel-priority" class="extra-panel"></div>
 
 <div id="shortcuts-hint">
   <div style="font-weight:700;margin-bottom:7px;color:#93c5fd">⌨️ Klávesové zkratky</div>
@@ -660,6 +678,14 @@ body.prihlasen #main-obsah { display: block; }
    </div>
    <div class="form-group"><label>STAV</label>
     <select id="f-stav"><option>Nacenit</option><option>Prohlídka</option><option>Objednáno</option><option>V realizaci</option><option>Odeslán rozpočet</option><option>Reklamace</option><option>K realizaci</option><option>Vyfakturováno</option><option>Odloženo</option><option>Dokončeno</option></select>
+   </div>
+   <div class="form-group" id="f-priorita-wrap"><label>⭐ Priorita <span style="font-size:10px;color:#888;font-weight:400">(jen správce)</span></label>
+    <select id="f-priorita">
+     <option value="">— Bez priority</option>
+     <option value="1">1 — Vysoká 🔴</option>
+     <option value="2">2 — Střední 🟠</option>
+     <option value="3">3 — Nízká 🔵</option>
+    </select>
    </div>
    <div class="form-group"><label>Požadovaný termín</label><input id="f-termin" type="date"></div>
    <div class="form-group" style="max-width:160px"><label>CN odeslána</label><input id="f-cn" type="date" placeholder="dd.mm.rrrr"></div>
@@ -892,7 +918,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v2.6';
+const APP_VERSION = 'v2.7';
 
 // === RÁMCOVÁ SMLOUVA s MČ Brno-Líšeň === (celková hodnota bez DPH)
 const RS_HODNOTA = 23400000;
@@ -1330,6 +1356,7 @@ function clickStat(filter, tab, idx) {
   document.getElementById('filter-typ').value = '';
   document.getElementById('filter-technik').value = '';
   const fa = document.getElementById('filter-adresa'); if (fa) fa.value = '';
+  const fp = document.getElementById('filter-priorita'); if (fp) fp.value = '';
   const tabs = document.querySelectorAll('.tab');
   tabs.forEach(t => t.classList.remove('active'));
   if (tab==='vyfakturovane') {
@@ -1358,6 +1385,7 @@ function switchTab(tab, el) {
   document.getElementById('filter-technik').value='';
   document.getElementById('search').value='';
   const fa=document.getElementById('filter-adresa'); if(fa) fa.value='';
+  const fp=document.getElementById('filter-priorita'); if(fp) fp.value='';
   const zpet=document.getElementById('zpet-btn'); if(zpet) zpet.remove();
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -1380,6 +1408,8 @@ function clearFilters() {
   document.getElementById('filter-technik').value='';
   const fa = document.getElementById('filter-adresa');
   if (fa) fa.value='';
+  const fp = document.getElementById('filter-priorita');
+  if (fp) fp.value='';
   activeStatFilter=null; renderTable();
 }
 
@@ -1429,6 +1459,15 @@ function sortRows(rows) {
       va = parseCastka(va); vb = parseCastka(vb);
       return (va - vb) * sortDir;
     }
+    // Priorita - 1 nahoru, prázdné dolů (sortDir=1 = vzestupně podle priority = nejvyšší nahoře)
+    if (sortCol === 'priorita') {
+      const pa = prioNum(a); const pb = prioNum(b);
+      // Prázdné vždy dolů, bez ohledu na směr
+      if (!pa && !pb) return 0;
+      if (!pa) return 1;
+      if (!pb) return -1;
+      return (pa - pb) * sortDir;
+    }
     return va.toString().localeCompare(vb.toString(), 'cs') * sortDir;
   });
 }
@@ -1438,16 +1477,44 @@ function thSort(col, label) {
   return `<th class="sortable${cls}" onclick="setSort('${col}')">${label}</th>`;
 }
 
+// ===== PRIORITA HELPERY =====
+// Vrací priorit. číslo jako 1/2/3 nebo null
+function prioNum(z) {
+  const p = parseInt(z.priorita);
+  return (p === 1 || p === 2 || p === 3) ? p : null;
+}
+// HTML badge pro tabulku (kroužek s číslem nebo pomlčka)
+function prioBadge(z) {
+  const p = prioNum(z);
+  if (!p) return '<span class="prio-none">—</span>';
+  return `<span class="prio-badge prio-${p}" title="Priorita ${p}">${p}</span>`;
+}
+// Text pro tisk a email
+function prioText(z) {
+  const p = prioNum(z);
+  if (!p) return '—';
+  const lbl = p === 1 ? 'Vysoká' : p === 2 ? 'Střední' : 'Nízká';
+  return `P${p} (${lbl})`;
+}
+// Barva pro tisk badge
+function prioPrintBg(z) {
+  const p = prioNum(z);
+  if (!p) return '';
+  return p === 1 ? '#A32D2D' : p === 2 ? '#854F0B' : '#0C447C';
+}
+
 // ===== TABULKA =====
 function renderTable() {
   updateTechnikFilter();
   renderStats();
+  updatePriorityTabBadge();
   const search = document.getElementById('search').value.toLowerCase();
   const filterStav = document.getElementById('filter-stav').value;
   const filterTyp = document.getElementById('filter-typ').value;
   const filterTechnik = document.getElementById('filter-technik').value;
+  const filterPriorita = (document.getElementById('filter-priorita') || {}).value || '';
   const source = currentTab==='pozadavky' ? data.pozadavky : currentTab==='vyfakturovane' ? data.vyfakturovane : data.stornovane;
-  const jeFiltr = search||filterStav||filterTyp||filterTechnik||activeStatFilter;
+  const jeFiltr = search||filterStav||filterTyp||filterTechnik||filterPriorita||activeStatFilter;
   document.getElementById('btn-tisk-tab').style.display = jeFiltr?'inline-flex':'none';
   let rows = source.filter(z => {
     const text = [z.adresa,z.popis,z.technik,z.pozadavek,z.kontakty,z.poznamky,z.objednavka].join(' ').toLowerCase();
@@ -1462,6 +1529,15 @@ function renderTable() {
     }
     if (filterTyp && z.typ!==filterTyp) return false;
     if (filterTechnik && z.technik!==filterTechnik) return false;
+    // Filtr priority
+    if (filterPriorita) {
+      const p = prioNum(z);
+      if (filterPriorita === 'none' && p) return false;
+      else if (filterPriorita === 'any' && !p) return false;
+      else if (filterPriorita === '1' && p !== 1) return false;
+      else if (filterPriorita === '2' && p !== 2) return false;
+      else if (filterPriorita === '3' && p !== 3) return false;
+    }
     return true;
   });
   if (!rows.length) {
@@ -1471,7 +1547,7 @@ function renderTable() {
   if (currentTab==='pozadavky') {
     document.getElementById('table-container').innerHTML = `<table><thead><tr>
       <th>#</th>${thSort('pozadavek','Požadavek')}${thSort('datum','Ze dne')}<th class="sortable${sortCol==='objednavka'?(sortDir===1?' sort-asc':' sort-desc'):''}" onclick="setSort('objednavka')" style="width:120px;white-space:nowrap">Č. objednávky</th>${thSort('adresa','Adresa')}${thSort('typ','Typ')}<th>Byt</th>
-      ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th>${thSort('stav','STAV')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
+      ${thSort('popis','Popis práce')}<th>Technik</th><th style="width:110px">Cena CN</th>${thSort('stav','STAV')}${thSort('priorita','⭐')}${thSort('termin','Termín')}<th style="min-width:180px">Poznámky</th><th style="min-width:160px">Kontakty</th><th>Akce</th>
       </tr></thead><tbody>${sortRows(rows).map((z,i)=>{
       const idx=source.indexOf(z);
       return `<tr data-idx="${idx}" class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):vyberRadek(${idx})}" ondblclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
@@ -1488,6 +1564,7 @@ function renderTable() {
         <td style="text-align:right;font-weight:600;white-space:nowrap;color:#555;width:110px;font-size:12px">${z.castka||''}</td>
 
         <td title="Stav lze změnit pouze v editaci zakázky"><span class="stav-select ${getStavClass(z.stav)}" style="display:inline-block;border-radius:20px;font-size:11px;font-weight:600;padding:4px 12px;cursor:default;white-space:nowrap">${z.stav||'–'}</span></td>
+        <td style="text-align:center" title="Priorita ${prioNum(z)?'P'+prioNum(z):'(nenastavena)'}">${prioBadge(z)}</td>
         <td class="has-tooltip" style="white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#666'};cursor:help">
           ${formatDatum(z.termin)}${isTerminPast(z.termin)?' ⚠️':''}
           <span class="tooltip-text" style="min-width:320px;white-space:nowrap">
@@ -1496,6 +1573,7 @@ function renderTable() {
             ${z.datum_zadani?'<div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0"><span style="opacity:0.7">📋 Zadáno do systému</span><span>'+formatDatum(z.datum_zadani)+'</span></div>':''}
             ${z.datum_obj?'<div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0"><span style="opacity:0.7">📦 Datum objednávky</span><span>'+formatDatum(z.datum_obj)+'</span></div>':''}
             ${z.cn?'<div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0"><span style="opacity:0.7">💰 CN odeslána</span><span>'+z.cn+'</span></div>':''}
+            ${prioNum(z)?'<div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0"><span style="opacity:0.7">⭐ Priorita</span><span style="font-weight:700;color:#fca5a5">P'+prioNum(z)+' '+(prioNum(z)===1?'Vysoká':prioNum(z)===2?'Střední':'Nízká')+'</span></div>':''}
             <div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0;border-top:1px solid rgba(255,255,255,0.2);margin-top:4px"><span style="opacity:0.7">⏰ Požadovaný termín</span><span style="font-weight:700;color:${isTerminPast(z.termin)?'#fca5a5':'#86efac'}">${z.termin?formatDatum(z.termin):'neurčen'}</span></div>
             ${z.termin?'<div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0"><span style="opacity:0.7">📆 Zbývá</span><span style="font-weight:700;color:'+(function(){const d=Math.round((new Date(z.termin)-new Date())/(1000*60*60*24));return d<0?'#fca5a5':'#86efac';})()+'">'+( function(){const d=Math.round((new Date(z.termin)-new Date())/(1000*60*60*24));return d<0?'Po termínu '+Math.abs(d)+' dní':'Zbývá '+d+' dní';})()+' </span></div>':''}
           </span>
@@ -1656,6 +1734,15 @@ function openModal(idx=null) {
     el.style.background = '';
     el.style.cursor = '';
   });
+  // Priorita: pole je vidět vždy, ale jen správce ho může měnit (ostatní role mají disabled)
+  const prioWrap = document.getElementById('f-priorita-wrap');
+  const prioSelect = document.getElementById('f-priorita');
+  if (prioWrap) prioWrap.style.display = '';
+  if (prioSelect) {
+    prioSelect.disabled = (aktualniRole !== 'spravce');
+    prioSelect.style.background = (aktualniRole !== 'spravce') ? '#f8f9fa' : '';
+    prioSelect.style.cursor = (aktualniRole !== 'spravce') ? 'not-allowed' : '';
+  }
   // Tlačítko Uložit vždy zobrazit
   const btnUlozit = document.querySelector('#modal .modal-footer .btn-primary');
   if (btnUlozit) btnUlozit.style.display = '';
@@ -1683,6 +1770,7 @@ function openModal(idx=null) {
     document.getElementById('f-faktura').value=z.faktura||'';
     document.getElementById('f-codal').value=z.codal||'';
     document.getElementById('f-stav').value=z.stav||'Nacenit';
+    document.getElementById('f-priorita').value=(z.priorita===1||z.priorita===2||z.priorita===3)?String(z.priorita):'';
     document.getElementById('f-termin').value=z.termin||'';
     document.getElementById('f-poznamky').value=z.poznamky||'';
     document.getElementById('f-kontakty').value=z.kontakty||'';
@@ -1696,6 +1784,7 @@ function openModal(idx=null) {
     document.getElementById('f-klice').value='';
     document.getElementById('f-technik').value='';
     document.getElementById('f-stav').value='Nacenit';
+    document.getElementById('f-priorita').value='';
     document.getElementById('f-datum').value=new Date().toISOString().split('T')[0];
     document.getElementById('f-datum-obj').value='';
     document.getElementById('f-datum-zadani').value=new Date().toISOString().split('T')[0];
@@ -1801,6 +1890,17 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
   const realizaceList = zakazky.filter(z => z.stav === 'V realizaci' || z.stav === 'Zahájeno')
     .sort((a,b) => (a.adresa||'').localeCompare(b.adresa||''));
 
+  // Priority - aktivní zakázky s nastavenou prioritou (P1 vždy nahoru, P2, P3, v rámci podle termínu)
+  const priorityList = zakazky.filter(z =>
+    prioNum(z) && z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno'
+  ).sort((a,b) => {
+    const pa = prioNum(a); const pb = prioNum(b);
+    if (pa !== pb) return pa - pb;
+    const ta = a.termin?new Date(a.termin).getTime():9e15;
+    const tb = b.termin?new Date(b.termin).getTime():9e15;
+    return ta - tb;
+  });
+
   // Včerejší změny - sledujeme přes localStorage
   const vceraDatum = vcera.toISOString().split('T')[0];
   let zmenySouhrn = [];
@@ -1835,6 +1935,28 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
         <td style="${rowStyle}">${z.stav||'–'}</td>
       </tr>`).join('')}
     </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné prošlé termíny ✅</p>';
+
+  // Tabulka priorit - inline barevný kroužek pro spolehlivost v emailu
+  const prioCircleHtml = (p) => {
+    const bg = p === 1 ? '#A32D2D' : p === 2 ? '#854F0B' : '#0C447C';
+    return `<span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${bg};color:#fff;font-weight:700;font-size:11px;-webkit-text-fill-color:#fff;mso-line-height-rule:exactly">${p}</span>`;
+  };
+  const tabulkaPriority = priorityList.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
+      <tr><td style="${hdStyle}width:40px;text-align:center">⭐</td><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Termín</td><td style="${hdStyle}">Stav</td></tr>
+      ${priorityList.map(z => {
+        const p = prioNum(z);
+        const isPast = z.termin && new Date(z.termin) < dnes;
+        return `<tr${p===1?' style="background:#fff5f5"':''}>
+          <td style="${rowStyle}text-align:center">${prioCircleHtml(p)}</td>
+          <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
+          <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+          <td style="${rowStyle}">${z.technik||'–'}</td>
+          <td style="${rowStyle}color:${isPast?'#c00':'#666'};font-weight:${isPast?'600':'400'}">${z.termin?formatDatumEmail(z.termin):'—'}${isPast?' ⚠️':''}</td>
+          <td style="${rowStyle}">${z.stav||'–'}</td>
+        </tr>`;
+      }).join('')}
+    </table>` : '<p style="color:#888;font-size:13px;padding:8px 10px">Žádné zakázky s prioritou ⭐</p>';
 
   const tabulkaBrzo = brzo.length ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:4px">
@@ -1942,6 +2064,13 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
     <div style="border-radius:8px;overflow:hidden">
       <div style="background:#FCA5A5;padding:8px 12px;font-size:12px;font-weight:600;color:#7F1D1D">🔴 Prošlé termíny — ihned řešit</div>
       ${tabulkaProsle}
+    </div>
+  </td></tr>
+
+  <tr><td style="padding:10px 24px 0">
+    <div style="border-radius:8px;overflow:hidden">
+      <div style="background:#fde68a;padding:8px 12px;font-size:12px;font-weight:600;color:#78350f">⭐ Prioritní zakázky (seřazené P1 → P3)</div>
+      ${tabulkaPriority}
     </div>
   </td></tr>
 
@@ -2313,6 +2442,17 @@ function saveZakazka() {
     drive_url: document.getElementById('f-drive-url').value.trim(),
     duvod_storna:'', datum_storna:''
   };
+  // Priorita: jen správce ji může nastavit; ostatní role nesmějí přepsat existující prioritu
+  if (aktualniRole === 'spravce') {
+    const pv = document.getElementById('f-priorita').value;
+    z.priorita = (pv === '1' || pv === '2' || pv === '3') ? parseInt(pv) : null;
+  } else if (editIndex !== null) {
+    // Neměnit existující prioritu pro non-spravce role
+    const srcPrio = (currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane)[editIndex];
+    z.priorita = srcPrio ? (srcPrio.priorita || null) : null;
+  } else {
+    z.priorita = null;
+  }
   if (!z.adresa && !z.popis) { showToast('⚠️ Vyplňte alespoň adresu nebo popis!'); return; }
   const source = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
   if (editIndex!==null) {
@@ -2532,6 +2672,7 @@ function tiskHlavni() {
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap;color:#16a34a;font-weight:600">${z.castka_fak||''}</td>
     <td style="padding:4px 5px"><span style="padding:2px 6px;border-radius:10px;font-size:9px;font-weight:600;background:#e2efda;color:#375623;-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
+    ${currentTab==='pozadavky'?`<td style="padding:4px 5px;text-align:center">${prioNum(z)?`<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:${prioPrintBg(z)};color:#fff;font-weight:700;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${prioNum(z)}</span>`:'<span style="color:#bbb">—</span>'}</td>`:''}
     <td style="padding:4px 5px;white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#333'}">${formatDatum(z.termin)}</td>
     <td style="padding:4px 5px;font-size:9px;color:#555;max-width:120px">${(z.poznamky||'').substring(0,80)}${z.poznamky&&z.poznamky.length>80?'…':''}</td>
     <td style="padding:4px 5px;font-size:9px;color:#555;max-width:110px">${(z.kontakty||'').substring(0,60)}${z.kontakty&&z.kontakty.length>60?'…':''}</td>
@@ -2565,6 +2706,7 @@ function tiskHlavni() {
       <th style="width:78px;text-align:right">Cena CN</th>
       <th style="width:78px;text-align:right">Fakt. částka</th>
       <th style="width:72px">Stav</th>
+      ${currentTab==='pozadavky'?'<th style="width:28px;text-align:center">⭐</th>':''}
       <th style="width:52px">Termín</th>
       <th style="width:120px">Poznámky</th>
       <th style="width:110px">Kontakty</th>
@@ -2622,6 +2764,7 @@ function tiskZakazky() {
     <div class="sec">🔧 REALIZACE</div>
     <div class="item"><div class="lbl">Technik</div><div class="val">${z.technik||'–'}</div></div>
     <div class="item"><div class="lbl">STAV</div><div class="val"><span class="stav-badge">${z.stav||'–'}</span></div></div>
+    <div class="item"><div class="lbl">⭐ Priorita</div><div class="val">${prioNum(z)?`<span style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;background:${prioPrintBg(z)};color:#fff;font-weight:700;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-right:6px">${prioNum(z)}</span>${prioText(z)}`:'<span style="color:#888">— bez priority</span>'}</div></div>
     <div class="item"><div class="lbl">Klíče</div><div class="val">${z.klice||'Ne'}</div></div>
     <div class="item"><div class="lbl">Požadovaný termín</div><div class="val" style="color:${isTerminPast(z.termin)?'#c00000':'#000'}">${formatDatum(z.termin)||'–'}</div></div>
     <div class="item"><div class="lbl">CN odeslána</div><div class="val">${z.cn||'–'}</div></div>
@@ -2997,7 +3140,7 @@ function switchView(view, el) {
   el.classList.add('active');
   document.querySelector('.table-wrap').style.display = 'none';
   document.querySelector('.filters').style.display = 'none';
-  ['dashboard','kanban','kalendar','adresy','technici','vykaz','terminy'].forEach(v => {
+  ['dashboard','kanban','kalendar','adresy','technici','vykaz','terminy','priority'].forEach(v => {
     const p = document.getElementById('panel-' + v);
     if (p) p.classList.remove('show');
   });
@@ -3010,6 +3153,7 @@ function switchView(view, el) {
   else if (view === 'technici') renderTechnici();
   else if (view === 'vykaz') renderVykaz();
   else if (view === 'terminy') renderTerminy();
+  else if (view === 'priority') renderPriority();
 }
 
 // Patch switchTab to also hide extra panels
@@ -3155,6 +3299,16 @@ saveZakazka = function() {
       if (orig.stav !== novyStav) zmeny.push('Stav: ' + orig.stav + ' → ' + novyStav);
       if (orig.technik !== novyTechnik) zmeny.push('Technik: ' + (orig.technik||'–') + ' → ' + (novyTechnik||'–'));
       if (orig.termin !== novyTermin) zmeny.push('Termín: ' + (orig.termin||'–') + ' → ' + (novyTermin||'–'));
+      // Změna priority – jen pokud správce a hodnota se opravdu změnila
+      if (aktualniRole === 'spravce') {
+        const pv = document.getElementById('f-priorita').value;
+        const novaPrio = (pv === '1' || pv === '2' || pv === '3') ? parseInt(pv) : null;
+        const staraPrio = (orig.priorita === 1 || orig.priorita === 2 || orig.priorita === 3) ? orig.priorita : null;
+        if (novaPrio !== staraPrio) {
+          const fmt = (p) => p ? ('P'+p) : 'bez priority';
+          zmeny.push('Priorita: ' + fmt(staraPrio) + ' → ' + fmt(novaPrio));
+        }
+      }
       if (zmeny.length > 0) {
         pridatHistorii(orig, zmeny.join('; '));
         // Správně zaznamenat změnu stavu s NOVÝM stavem
@@ -3395,8 +3549,9 @@ function renderKanban() {
             const idx = sourceArr.indexOf(z);
             const tc = isTerminProsly(z.termin) ? 'color:#dc2626' : isTerminBlizko(z.termin) ? 'color:#f97316' : 'color:#888';
             const dispCastka = z.castka_fak || z.castka;
-            return `<div class="kanban-card" style="border-left-color:${ks.bg}" onclick="editKanbanCard(${idx},'${ks.source}')">
-              <div class="kc-adresa">${z.adresa||'–'} ${z.byt?'č.'+z.byt:''}</div>
+            return `<div class="kanban-card" style="border-left-color:${ks.bg};position:relative" onclick="editKanbanCard(${idx},'${ks.source}')">
+              ${prioNum(z)?`<div style="position:absolute;top:6px;right:6px">${prioBadge(z)}</div>`:''}
+              <div class="kc-adresa" style="${prioNum(z)?'padding-right:30px':''}">${z.adresa||'–'} ${z.byt?'č.'+z.byt:''}</div>
               <div class="kc-popis" title="${(z.popis||'').replace(/"/g,'&quot;')}">${z.popis||'(bez popisu)'}</div>
               <div class="kc-technik">👷 ${z.technik||'–'}</div>
               ${z.termin ? `<div class="kc-termin" style="${tc}">📅 ${formatDatum(z.termin)}${isTerminProsly(z.termin)?' ⚠️':''}</div>` : ''}
@@ -3452,7 +3607,9 @@ function renderKalendar() {
         const idx = data.pozadavky.indexOf(z);
         const vIdx = data.vyfakturovane.indexOf(z);
         const onClick = idx >= 0 ? `editZakazka(${idx})` : vIdx >= 0 ? `editZakazka(${vIdx})` : '';
-        return `<div class="kal-ev ${cls}" onclick="${onClick}" title="${z.adresa} – ${z.popis||''}">${z.adresa||z.popis||'–'}</div>`;
+        const p = prioNum(z);
+        const prefix = p ? `<span style="display:inline-block;width:12px;height:12px;line-height:12px;text-align:center;border-radius:50%;background:${p===1?'#A32D2D':p===2?'#854F0B':'#0C447C'};color:#fff;font-weight:700;font-size:9px;margin-right:3px;vertical-align:middle">${p}</span>` : '';
+        return `<div class="kal-ev ${cls}" onclick="${onClick}" title="${p?'⭐ Priorita P'+p+' · ':''}${z.adresa} – ${z.popis||''}">${prefix}${z.adresa||z.popis||'–'}</div>`;
       }).join('')}
     </div>`;
   }
@@ -3701,6 +3858,79 @@ function renderTerminy() {
     ${dalsi.length ? `<div style="background:#f0fdf4;border-radius:10px;padding:14px;border-left:4px solid #16a34a">
       <h3 style="color:#166534;margin-bottom:8px">✅ Vzdálenější termíny (${dalsi.length})</h3>${dalsi.map(tCard).join('')}</div>` : ''}
     ${vsechny.length === 0 ? '<div style="text-align:center;padding:40px;color:#aaa">Žádné zakázky s termínem.</div>' : ''}`;
+}
+
+// ============================================================
+// === PŘEHLED PRIORIT ===
+// ============================================================
+function renderPriority() {
+  const dnes = new Date(); dnes.setHours(0,0,0,0);
+  // Jen aktivní požadavky (ne vyfakturované/stornované/dokončené)
+  const aktivni = data.pozadavky.filter(z =>
+    z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno'
+  );
+  const p1 = aktivni.filter(z => prioNum(z) === 1).sort((a,b) => {
+    const ta = a.termin?new Date(a.termin).getTime():9e15;
+    const tb = b.termin?new Date(b.termin).getTime():9e15;
+    return ta - tb;
+  });
+  const p2 = aktivni.filter(z => prioNum(z) === 2).sort((a,b) => {
+    const ta = a.termin?new Date(a.termin).getTime():9e15;
+    const tb = b.termin?new Date(b.termin).getTime():9e15;
+    return ta - tb;
+  });
+  const p3 = aktivni.filter(z => prioNum(z) === 3).sort((a,b) => {
+    const ta = a.termin?new Date(a.termin).getTime():9e15;
+    const tb = b.termin?new Date(b.termin).getTime():9e15;
+    return ta - tb;
+  });
+
+  function pCard(z) {
+    const idx = data.pozadavky.indexOf(z);
+    const isPast = z.termin && new Date(z.termin) < dnes;
+    const terminText = z.termin
+      ? formatDatum(z.termin) + (isPast ? ' ⚠️' : '')
+      : 'bez termínu';
+    return `<div class="termin-item" onclick="editZakazka(${idx})" style="cursor:pointer">
+      <div style="display:flex;align-items:center;justify-content:center;width:46px;flex-shrink:0">
+        ${prioBadge(z)}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;color:#1f3864">${z.pozadavek?'#'+z.pozadavek+' · ':''}${z.adresa||'–'} ${z.byt?'byt '+z.byt:''}</div>
+        <div style="font-size:12px;color:#555;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${z.popis||'(bez popisu)'}</div>
+        <div style="font-size:11px;color:#888;margin-top:1px">👷 ${z.technik||'–'} · 📅 <span style="color:${isPast?'#dc2626':'#666'};font-weight:${isPast?'600':'400'}">${terminText}</span></div>
+      </div>
+      <span class="stav ${getStavClass(z.stav)}">${z.stav}</span>
+    </div>`;
+  }
+
+  const celkem = p1.length + p2.length + p3.length;
+
+  document.getElementById('panel-priority').innerHTML = `
+    <h2 style="font-size:20px;font-weight:700;color:#1f3864;margin-bottom:6px">⭐ Přehled priorit</h2>
+    <div style="font-size:12px;color:#888;margin-bottom:14px">Aktivní zakázky seřazené podle priority (P1 → P2 → P3). V každé skupině seřazené podle termínu.</div>
+    ${p1.length ? `<div style="background:#fff0f0;border-radius:10px;padding:14px;margin-bottom:14px;border-left:4px solid #A32D2D">
+      <h3 style="color:#791F1F;margin-bottom:8px">🔴 P1 — Vysoká priorita (${p1.length})</h3>${p1.map(pCard).join('')}</div>` : ''}
+    ${p2.length ? `<div style="background:#fff8e8;border-radius:10px;padding:14px;margin-bottom:14px;border-left:4px solid #854F0B">
+      <h3 style="color:#633806;margin-bottom:8px">🟠 P2 — Střední priorita (${p2.length})</h3>${p2.map(pCard).join('')}</div>` : ''}
+    ${p3.length ? `<div style="background:#e8f1fb;border-radius:10px;padding:14px;margin-bottom:14px;border-left:4px solid #0C447C">
+      <h3 style="color:#042C53;margin-bottom:8px">🔵 P3 — Nízká priorita (${p3.length})</h3>${p3.map(pCard).join('')}</div>` : ''}
+    ${celkem === 0 ? '<div style="text-align:center;padding:40px;color:#aaa"><p style="font-size:48px;margin-bottom:12px">⭐</p><p>Žádné zakázky nemají nastavenou prioritu.</p><p style="font-size:12px;margin-top:6px">Prioritu nastavíš v editaci zakázky (pole „⭐ Priorita" vedle STAV).</p></div>' : ''}`;
+}
+
+// Aktualizace badge počtu priorit na záložce
+function updatePriorityTabBadge() {
+  const badge = document.getElementById('prio-tab-badge');
+  if (!badge) return;
+  const aktivni = data.pozadavky.filter(z =>
+    z.stav !== 'Vyfakturováno' && z.stav !== 'Dokončeno' && z.stav !== 'Stornováno' && prioNum(z)
+  );
+  if (aktivni.length > 0) {
+    badge.textContent = aktivni.length;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 // ============================================================
