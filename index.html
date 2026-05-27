@@ -918,7 +918,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v2.7';
+const APP_VERSION = 'v2.8';
 
 // === RÁMCOVÁ SMLOUVA s MČ Brno-Líšeň === (celková hodnota bez DPH)
 const RS_HODNOTA = 23400000;
@@ -1501,6 +1501,25 @@ function prioPrintBg(z) {
   const p = prioNum(z);
   if (!p) return '';
   return p === 1 ? '#A32D2D' : p === 2 ? '#854F0B' : '#0C447C';
+}
+
+// Barvy stavu pro tisk (kopie z .stav-select v CSS)
+function stavPrintColors(stav) {
+  const map = {
+    'Nacenit':         {bg:'#F5C400', fg:'#5a3d00'},
+    'Prohlídka':       {bg:'#6A1B9A', fg:'#ffffff'},
+    'Objednáno':       {bg:'#1565C0', fg:'#ffffff'},
+    'V realizaci':     {bg:'#2E7D32', fg:'#ffffff'},
+    'Zahájeno':        {bg:'#2E7D32', fg:'#ffffff'}, // migrace
+    'Odeslán rozpočet':{bg:'#E65100', fg:'#ffffff'},
+    'Reklamace':       {bg:'#C62828', fg:'#ffffff'},
+    'K realizaci':     {bg:'#00838F', fg:'#ffffff'},
+    'Vyfakturováno':   {bg:'#e2efda', fg:'#375623'},
+    'Odloženo':        {bg:'#78909C', fg:'#ffffff'},
+    'Dokončeno':       {bg:'#1a1a1a', fg:'#ffffff'},
+    'Stornováno':      {bg:'#991b1b', fg:'#ffffff'}
+  };
+  return map[stav] || {bg:'#e0e0e0', fg:'#333333'};
 }
 
 // ===== TABULKA =====
@@ -2671,7 +2690,7 @@ function tiskHlavni() {
     <td style="padding:4px 5px;white-space:nowrap">${z.technik||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap;color:#16a34a;font-weight:600">${z.castka_fak||''}</td>
-    <td style="padding:4px 5px"><span style="padding:2px 6px;border-radius:10px;font-size:9px;font-weight:600;background:#e2efda;color:#375623;-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
+    <td style="padding:4px 5px"><span style="padding:2px 6px;border-radius:10px;font-size:9px;font-weight:600;background:${stavPrintColors(z.stav).bg};color:${stavPrintColors(z.stav).fg};-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
     ${currentTab==='pozadavky'?`<td style="padding:4px 5px;text-align:center">${prioNum(z)?`<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:${prioPrintBg(z)};color:#fff;font-weight:700;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${prioNum(z)}</span>`:'<span style="color:#bbb">—</span>'}</td>`:''}
     <td style="padding:4px 5px;white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#333'}">${formatDatum(z.termin)}</td>
     <td style="padding:4px 5px;font-size:9px;color:#555;max-width:120px">${(z.poznamky||'').substring(0,80)}${z.poznamky&&z.poznamky.length>80?'…':''}</td>
@@ -2763,7 +2782,7 @@ function tiskZakazky() {
     <div class="item"><div class="lbl">Typ / Byt</div><div class="val">${z.typ||'–'} / č. ${z.byt||'–'}</div></div>
     <div class="sec">🔧 REALIZACE</div>
     <div class="item"><div class="lbl">Technik</div><div class="val">${z.technik||'–'}</div></div>
-    <div class="item"><div class="lbl">STAV</div><div class="val"><span class="stav-badge">${z.stav||'–'}</span></div></div>
+    <div class="item"><div class="lbl">STAV</div><div class="val"><span class="stav-badge" style="background:${stavPrintColors(z.stav).bg};color:${stavPrintColors(z.stav).fg}">${z.stav||'–'}</span></div></div>
     <div class="item"><div class="lbl">⭐ Priorita</div><div class="val">${prioNum(z)?`<span style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;background:${prioPrintBg(z)};color:#fff;font-weight:700;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-right:6px">${prioNum(z)}</span>${prioText(z)}`:'<span style="color:#888">— bez priority</span>'}</div></div>
     <div class="item"><div class="lbl">Klíče</div><div class="val">${z.klice||'Ne'}</div></div>
     <div class="item"><div class="lbl">Požadovaný termín</div><div class="val" style="color:${isTerminPast(z.termin)?'#c00000':'#000'}">${formatDatum(z.termin)||'–'}</div></div>
@@ -2929,7 +2948,7 @@ function tiskTabulky() {
     <td style="padding:4px 5px;white-space:nowrap">${z.technik||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap;color:#16a34a;font-weight:600">${z.castka_fak||''}</td>
-    <td style="padding:4px 5px"><span style="padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:#e2efda;color:#375623;-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
+    <td style="padding:4px 5px"><span style="padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:${stavPrintColors(z.stav).bg};color:${stavPrintColors(z.stav).fg};-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
     <td style="padding:4px 5px;white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#333'}">${formatDatum(z.termin)}</td>
     <td style="padding:4px 5px;font-size:9px;color:#555">${z.poznamky||''}</td>
     <td style="padding:4px 5px;font-size:9px;color:#555">${z.kontakty||''}</td>
