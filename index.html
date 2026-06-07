@@ -918,7 +918,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v3.0';
+const APP_VERSION = 'v3.1';
 // Nastav verzi v záhlaví hned po načtení DOM (ať se nehardcoduje placeholder)
 document.addEventListener('DOMContentLoaded', () => {
   const ls = document.getElementById('last-save');
@@ -1619,7 +1619,7 @@ function renderTable() {
         <td style="white-space:nowrap;color:#2e75b6;font-size:12px;font-weight:600;width:120px;max-width:120px">${z.objednavka||''}</td>
 
         <td style="font-weight:500;white-space:nowrap">${z.adresa||''}</td>
-        <td><span style="display:inline-block;background:#e8f0fe;color:#1f3864;padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;max-width:92px;white-space:normal;line-height:1.2;text-align:center;vertical-align:middle">${z.typ||'–'}</span></td>
+        <td style="text-align:center">${typBadge(z.typ)}</td>
         <td style="text-align:center;font-weight:600">${z.byt||''}</td>
         <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="has-tooltip" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;cursor:help">${(z.popis||'').substring(0,40)}${z.popis&&z.popis.length>40?'…':''}<span class="tooltip-text">${(z.popis||'(bez popisu)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></span></td>
         <td style="white-space:nowrap">${z.technik||''}</td>
@@ -1661,7 +1661,7 @@ function renderTable() {
         <td style="font-weight:600;color:#375623">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
         <td style="font-weight:500">${z.adresa||''}</td>
-        <td><span style="background:#e8f5e9;color:#375623;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600">${z.typ||''}</span></td>
+        <td style="text-align:center">${typBadge(z.typ)}</td>
         <td style="text-align:center;font-weight:600">${z.byt||''}</td>
         <td style="max-width:220px">${z.popis||''}</td>
         <td style="white-space:nowrap">${z.technik||''}</td>
@@ -1694,7 +1694,7 @@ function renderTable() {
         <td style="font-weight:600;color:#991b1b">${z.pozadavek||''}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
         <td style="font-weight:500;text-decoration:line-through;color:#999">${z.adresa||''}</td>
-        <td>${z.typ||''}</td><td>${z.byt||''}</td>
+        <td style="text-align:center">${typBadge(z.typ)}</td><td>${z.byt||''}</td>
         <td style="max-width:180px;color:#888">${z.popis||''}</td>
         <td>${z.technik||''}</td>
         <td style="text-align:right;color:#aaa">${z.castka||''}</td>
@@ -2728,7 +2728,7 @@ function tiskHlavni() {
     <td style="padding:4px 5px;font-weight:600;color:#1f3864">${z.pozadavek||''}</td>
     <td style="padding:4px 5px;white-space:nowrap">${formatDatum(z.datum)}</td>
     <td style="padding:4px 5px;font-weight:500">${z.adresa||''}${z.byt?'<br><span style="color:#888;font-size:9px">byt č.'+z.byt+'</span>':''}</td>
-    <td style="padding:4px 5px"><span style="background:#e8f0fe;color:#1f3864;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.typ||''}</span></td>
+    <td style="padding:4px 5px;text-align:center">${typBadge(z.typ,{fontSize:'9px',pad:'1px 5px',maxWidth:'70px',print:true})}</td>
     <td style="padding:4px 5px">${z.popis||''}</td>
     <td style="padding:4px 5px;white-space:nowrap">${z.technik||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
@@ -2986,7 +2986,7 @@ function tiskTabulky() {
     <td style="padding:4px 5px;font-weight:600">${z.pozadavek||''}</td>
     <td style="padding:4px 5px;white-space:nowrap">${formatDatum(z.datum)}</td>
     <td style="padding:4px 5px">${z.adresa||''}${z.byt?', č.'+z.byt:''}</td>
-    <td style="padding:4px 5px">${z.typ||''}</td>
+    <td style="padding:4px 5px;text-align:center">${typBadge(z.typ,{fontSize:'9px',pad:'1px 5px',maxWidth:'70px',print:true})}</td>
     <td style="padding:4px 5px">${z.popis||''}</td>
     <td style="padding:4px 5px;white-space:nowrap">${z.technik||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
@@ -3151,7 +3151,31 @@ setTimeout(zkontrolujZalohu,1500);
 
 // ============================================================
 
-// TYP_NAZEV (mapa zkratek na názvy) zrušena ve v3.0 — typy se nyní ukládají rovnou plnými názvy.
+// === BARVY TYPŮ (v3.1) — světlé pozadí + tmavší text ze stejné rodiny ===
+// ZATÉKÁNÍ, VÝPLNĚ OTVORŮ a JINÉ OSTATNÍ mají záměrně shodnou šedomodrou.
+const TYP_BARVY = {
+  'PODESTA BALKÓNU':  { bg:'#FAECE7', fg:'#993C1D' },
+  'BYT':              { bg:'#E6F1FB', fg:'#0C447C' },
+  'KOUPELNA':         { bg:'#E1F5EE', fg:'#0F6E56' },
+  'MALBY':            { bg:'#FAEEDA', fg:'#854F0B' },
+  'OPRAVA SCHODIŠTĚ': { bg:'#EEEDFE', fg:'#3C3489' },
+  'PODLAHY VÝMĚNA':   { bg:'#EAF3DE', fg:'#3B6D11' },
+  'SPOLEČNÉ PROSTORY':{ bg:'#F1EFE8', fg:'#444441' },
+  'VÝPLNĚ OTVORŮ':    { bg:'#EAEDF2', fg:'#3D4759' },
+  'ZATÉKÁNÍ':         { bg:'#EAEDF2', fg:'#3D4759' },
+  'JINÉ OSTATNÍ':     { bg:'#EAEDF2', fg:'#3D4759' }
+};
+function typBarva(typ) { return TYP_BARVY[typ] || { bg:'#EEF0F2', fg:'#555555' }; }
+// Vrátí HTML barevného vycentrovaného štítku typu. opts: {fontSize, pad, maxWidth, print}
+function typBadge(typ, opts) {
+  opts = opts || {};
+  const c = typBarva(typ);
+  const fs = opts.fontSize || '11px';
+  const pad = opts.pad || '3px 7px';
+  const mw = opts.maxWidth || '92px';
+  const pr = opts.print ? '-webkit-print-color-adjust:exact;print-color-adjust:exact;' : '';
+  return `<span style="display:inline-block;background:${c.bg};color:${c.fg};padding:${pad};border-radius:4px;font-size:${fs};font-weight:600;max-width:${mw};white-space:normal;line-height:1.2;text-align:center;vertical-align:middle;${pr}">${typ||'–'}</span>`;
+}
 
 // === NOVÉ FUNKCE: TERMINOVÉ UPOZORNĚNÍ ===
 // ============================================================
@@ -3509,7 +3533,7 @@ function renderDashboard() {
 
     charts['typy'] = new Chart(document.getElementById('ch-typy'), {
       type: 'doughnut',
-      data: { labels: tyKeys, datasets: [{ data: tyKeys.map(k => typy[k]), backgroundColor: typColors, borderWidth: 2, borderColor: '#fff' }] },
+      data: { labels: tyKeys, datasets: [{ data: tyKeys.map(k => typy[k]), backgroundColor: tyKeys.map(k => typBarva(k).fg), borderWidth: 2, borderColor: '#fff' }] },
       options: {
         responsive: true,
         plugins: {
@@ -3603,7 +3627,8 @@ function renderKanban() {
             const dispCastka = z.castka_fak || z.castka;
             return `<div class="kanban-card" style="border-left-color:${ks.bg};position:relative" onclick="editKanbanCard(${idx},'${ks.source}')">
               ${prioNum(z)?`<div style="position:absolute;top:6px;right:6px">${prioBadge(z)}</div>`:''}
-              <div class="kc-adresa" style="${prioNum(z)?'padding-right:30px':''}">${z.adresa||'–'} ${z.byt?'č.'+z.byt:''}</div>
+              ${z.typ?`<div style="margin-bottom:5px;${prioNum(z)?'padding-right:28px':''}">${typBadge(z.typ,{fontSize:'10px',pad:'2px 6px',maxWidth:'100%'})}</div>`:''}
+              <div class="kc-adresa" style="${(prioNum(z)&&!z.typ)?'padding-right:30px':''}">${z.adresa||'–'} ${z.byt?'č.'+z.byt:''}</div>
               <div class="kc-popis" title="${(z.popis||'').replace(/"/g,'&quot;')}">${z.popis||'(bez popisu)'}</div>
               <div class="kc-technik">👷 ${z.technik||'–'}</div>
               ${z.termin ? `<div class="kc-termin" style="${tc}">📅 ${formatDatum(z.termin)}${isTerminProsly(z.termin)?' ⚠️':''}</div>` : ''}
@@ -3661,7 +3686,7 @@ function renderKalendar() {
         const onClick = idx >= 0 ? `editZakazka(${idx})` : vIdx >= 0 ? `editZakazka(${vIdx})` : '';
         const p = prioNum(z);
         const prefix = p ? `<span style="display:inline-block;width:12px;height:12px;line-height:12px;text-align:center;border-radius:50%;background:${p===1?'#A32D2D':p===2?'#854F0B':'#0C447C'};color:#fff;font-weight:700;font-size:9px;margin-right:3px;vertical-align:middle">${p}</span>` : '';
-        return `<div class="kal-ev ${cls}" onclick="${onClick}" title="${p?'⭐ Priorita P'+p+' · ':''}${z.adresa} – ${z.popis||''}">${prefix}${z.adresa||z.popis||'–'}</div>`;
+        return `<div class="kal-ev ${cls}" style="border-left:3px solid ${typBarva(z.typ).fg}" onclick="${onClick}" title="${p?'⭐ Priorita P'+p+' · ':''}${z.typ?z.typ+' · ':''}${z.adresa} – ${z.popis||''}">${prefix}${z.adresa||z.popis||'–'}</div>`;
       }).join('')}
     </div>`;
   }
