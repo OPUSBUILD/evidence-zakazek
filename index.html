@@ -688,7 +688,6 @@ body.prihlasen #main-obsah { display: block; }
     </select>
    </div>
    <div class="form-group"><label>Požadovaný termín</label><input id="f-termin" type="date"></div>
-   <div class="form-group"><label>📅 DUZP (datum předání)</label><input id="f-duzp" type="date" style="border-color:#16a34a;background:#f0fdf4"></div>
    <div class="form-group" style="max-width:160px"><label>CN odeslána</label><input id="f-cn" type="date" placeholder="dd.mm.rrrr"></div>
    <div class="form-group span2"><label>Co dále?</label><input id="f-codal" placeholder="např. naplánovat termín"></div>
    <div class="form-group full"><label>Popis práce</label><textarea id="f-popis" placeholder="Stručný popis zakázky..." style="min-height:52px"></textarea></div>
@@ -699,6 +698,7 @@ body.prihlasen #main-obsah { display: block; }
    <div class="form-group"><label>Cena dle rozpočtu (CN)</label><input id="f-castka" placeholder="např. 1 234 567,80 Kč" maxlength="16" oninput="formatCastka(this);updateRozdil()" onblur="formatCastkaFinal(this)"></div>
    <div class="form-group"><label>Skutečná fakturovaná částka</label><input id="f-castka-fak" placeholder="např. 1 234 567,80 Kč" maxlength="16" oninput="formatCastka(this);updateRozdil()" onblur="formatCastkaFinal(this)"></div>
    <div class="form-group"><label>Faktura OPUS</label><input id="f-faktura" placeholder="např. 260018"></div>
+   <div class="form-group"><label>📅 DUZP (datum předání)</label><input id="f-duzp" type="date" style="border-color:#16a34a;background:#f0fdf4"></div>
    <div class="form-group"><label>Rozdíl CN vs. faktura</label>
     <div id="f-rozdil-info" style="padding:8px 10px;border-radius:8px;font-size:13px;font-weight:600;background:#f3f4f6;color:#888">–</div>
    </div>
