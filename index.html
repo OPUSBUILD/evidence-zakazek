@@ -919,7 +919,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v3.2';
+const APP_VERSION = 'v3.3';
 // Nastav verzi v záhlaví hned po načtení DOM (ať se nehardcoduje placeholder)
 document.addEventListener('DOMContentLoaded', () => {
   const ls = document.getElementById('last-save');
@@ -2675,15 +2675,15 @@ function otevritProtokol(idx) {
   // Auto-fill technik v podpisu
   const techPodpis = document.getElementById('p-technik-podpis');
   if (techPodpis) techPodpis.textContent = z.technik || '';
-  // Výpočet záručních lhůt (36 a 24 měsíců od data předání = dnes)
-  const dnesDt = new Date();
-  const z36 = new Date(dnesDt); z36.setMonth(z36.getMonth() + 36);
-  const z24 = new Date(dnesDt); z24.setMonth(z24.getMonth() + 24);
+  // Výpočet záručních lhůt (36 a 24 měsíců od data předání = DUZP zakázky; není-li DUZP vyplněné, použije se dnešek jako záloha)
+  const zarukaOd = z.duzp ? new Date(z.duzp) : new Date();
+  const z36 = new Date(zarukaOd); z36.setMonth(z36.getMonth() + 36);
+  const z24 = new Date(zarukaOd); z24.setMonth(z24.getMonth() + 24);
   const fmtZar = d => d.toLocaleDateString('cs-CZ');
   const el36 = document.getElementById('p-zaruka-36-do');
   const el24 = document.getElementById('p-zaruka-24-do');
-  if (el36) el36.textContent = fmtZar(z36);
-  if (el24) el24.textContent = fmtZar(z24);
+  if (el36) makeEdit(el36, fmtZar(z36));
+  if (el24) makeEdit(el24, fmtZar(z24));
   const cn=parseCastka(z.castka), fak=parseCastka(z.castka_fak), rozdil=fak-cn;
   document.getElementById('fak-sub').textContent='Zakázka č. '+(z.pozadavek||'')+' | '+(z.adresa||'')+' | Technik: '+(z.technik||'');
   document.getElementById('fak-grid').innerHTML=`
