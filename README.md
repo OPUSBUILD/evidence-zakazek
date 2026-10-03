@@ -7,6 +7,8 @@ Interní webová aplikace společnosti **OPUS BUILD s.r.o.** pro evidenci požad
 - Celá aplikace je v souboru `index.html`.
 
 ## Aktuální verze
+**v3.5** (3. 10. 2026) – z vestavěné nouzové zálohy odstraněny kontaktní údaje nájemníků.
+
 **v3.4** (3. 10. 2026) – pojistky dat: offline režim jen pro čtení, úpravy podle ID zakázky, DUZP z protokolu jen po potvrzení, technici v nabídce, export Excel celé evidence, bezpečný výpis textu.
 
 ## Nasazení nové verze
