@@ -20,7 +20,8 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0f2f5;
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.12)}
 .stat-card.active-filter{box-shadow:0 0 0 2px #2e75b6;transform:translateY(-2px)}
 .stat-card .number{font-size:18px;font-weight:700;line-height:1.1}
-.stat-card .label{font-size:10.5px;color:#666;margin-top:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-card .label{font-size:10.5px;color:#666;margin-top:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.stat-card .number{flex-shrink:0}
 .sc-blue{background:#2563eb!important;border-left-color:#1d4ed8!important}.sc-blue .number{color:#fff!important}.sc-blue .label{color:rgba(255,255,255,0.9)!important}
 .sc-yellow{background:#fef9c3!important;border-left-color:#ca8a04!important}.sc-yellow .number{color:#854d0e!important}.sc-yellow .label{color:#854d0e!important}
 .sc-orange{background:#ffedd5!important;border-left-color:#ea580c!important}.sc-orange .number{color:#9a3412!important}.sc-orange .label{color:#9a3412!important}
@@ -651,6 +652,7 @@ body.prihlasen #main-obsah { display: block; }
       <option>Marcela Knížová</option>
       <option>Hana Špačková</option>
       <option>Nina Vitásková</option>
+      <option>Libuše Imrichová</option>
       <div id="f-technik-extra-options"></div>
       <option value="__novy__">+ Přidat nového technika...</option>
      </select>
@@ -919,7 +921,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v3.3';
+const APP_VERSION = 'v3.4';
 // Nastav verzi v záhlaví hned po načtení DOM (ať se nehardcoduje placeholder)
 document.addEventListener('DOMContentLoaded', () => {
   const ls = document.getElementById('last-save');
@@ -1080,7 +1082,11 @@ function zkontrolujPrihlaseni() {
 }
 let currentTab = 'pozadavky';
 let editIndex = null;
+let editId = null;      // v3.4: id upravované zakázky – index se může změnit, když kolega mezitím uloží
 let lastEditedIdx = null;
+// v3.4: dohledá aktuální pozici zakázky podle id (data mohla mezitím přijít ze synchronizace)
+function najdiIdx(seznam, id) { return (seznam || []).findIndex(z => z && z.id === id); }
+function zakazkaZmizela() { showToast('⚠️ Zakázku mezitím přesunul nebo smazal jiný uživatel – nic nebylo uloženo. Zkontrolujte ji a akci zopakujte.'); renderTable(); }
 let lastEditedTab = null;
 let selectedIdx = null;
 let activeStatFilter = null;
@@ -1217,20 +1223,27 @@ function loadData() {
     }
   }).catch(err => {
     console.error('Firebase chyba:', err);
-    document.getElementById('last-save').textContent = '⚠️ Offline – lokální data';
+    // v3.4: Cloud se nenačetl. Kopie z prohlížeče může být stará – zobrazit ji JEN PRO ČTENÍ.
+    // Kdyby se uložila, přepsala by celou evidenci v cloudu (včetně změn kolegů).
+    dataZeZalohy = true;
     try {
       const saved = localStorage.getItem('ez26_data');
       if (saved) { const p = JSON.parse(saved); if (p && p.pozadavky) { data = p; if (!data.stornovane) data.stornovane = []; } else nacistDataZExcelu(); }
       else nacistDataZExcelu();
     } catch(e) { nacistDataZExcelu(); }
     renderTable();
+    const ls = document.getElementById('last-save');
+    if (ls) ls.innerHTML = '<span style="color:#fca5a5;font-weight:700">⚠️ OFFLINE – kopie z tohoto počítače, JEN PRO ČTENÍ (ukládání vypnuto). Zkouším se znovu připojit…</span>';
+    // Opakovaný pokus o připojení; po úspěchu loadData() samo zruší režim jen pro čtení
+    clearTimeout(window._offlineRetry);
+    window._offlineRetry = setTimeout(loadData, 15000);
   });
 }
 
 function saveData() {
   if (dataZeZalohy) {
     console.error('saveData ZABLOKOVÁNO: zobrazena záložní data, zápis do cloudu by přepsal ostrá data!');
-    showToast('🛑 Ukládání zablokováno – běží nouzový režim se starými daty. Obnovte stránku (F5).');
+    showToast('🛑 Ukládání zablokováno – aplikace není připojená ke cloudu (zobrazená data mohou být stará). Počkejte na připojení nebo obnovte stránku (F5).');
     return;
   }
   if (aktualniRole === 'technik') {
@@ -1320,6 +1333,8 @@ function formatDatum(d) {
 }
 
 function isTerminPast(t) { return t && new Date(t) < new Date(); }
+// v3.4: bezpečný výpis textu do HTML (znaky < > & " v poznámkách nerozbijí tabulku)
+function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function getStavClass(stav) {
   if (stav === 'Zahájeno') return 's-Vrealizaci'; // migrace starých dat
@@ -1659,15 +1674,15 @@ function renderTable() {
       const idx=source.indexOf(z);
       return `<tr data-idx="${idx}" class="${(z.termin&&new Date(z.termin)<new Date())?'row-urgent-red':(z.termin&&(new Date(z.termin)-new Date())/86400000<=14)?'row-urgent-orange':i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):vyberRadek(${idx})}" ondblclick="if(!event.target.closest('.row-actions,.stav-select')){aktualniRole==='technik'?zobrazitDetail(${idx}):editZakazka(${idx})}" style="cursor:pointer">
         <td style="color:#888;font-size:11px">${i+1}</td>
-        <td style="font-weight:600;color:#1f3864">${z.pozadavek||''}</td>
+        <td style="font-weight:600;color:#1f3864">${esc(z.pozadavek)}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
-        <td style="white-space:nowrap;color:#2e75b6;font-size:12px;font-weight:600;width:120px;max-width:120px">${z.objednavka||''}</td>
+        <td style="white-space:nowrap;color:#2e75b6;font-size:12px;font-weight:600;width:120px;max-width:120px">${esc(z.objednavka)}</td>
 
-        <td style="font-weight:500;white-space:nowrap">${z.adresa||''}</td>
+        <td style="font-weight:500;white-space:nowrap">${esc(z.adresa)}</td>
         <td style="text-align:center">${typBadge(z.typ)}</td>
-        <td style="text-align:center;font-weight:600">${z.byt||''}</td>
-        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="has-tooltip" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;cursor:help">${(z.popis||'').substring(0,40)}${z.popis&&z.popis.length>40?'…':''}<span class="tooltip-text">${(z.popis||'(bez popisu)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></span></td>
-        <td style="white-space:nowrap">${z.technik||''}</td>
+        <td style="text-align:center;font-weight:600">${esc(z.byt)}</td>
+        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span class="has-tooltip" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;cursor:help">${esc((z.popis||'').substring(0,40))}${z.popis&&z.popis.length>40?'…':''}<span class="tooltip-text">${(z.popis||'(bez popisu)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></span></td>
+        <td style="white-space:nowrap">${esc(z.technik)}</td>
         <td style="text-align:right;font-weight:600;white-space:nowrap;color:#555;width:110px;font-size:12px">${z.castka||''}</td>
 
         <td title="Stav lze změnit pouze v editaci zakázky"><span class="stav-select ${getStavClass(z.stav)}" style="display:inline-block;border-radius:20px;font-size:11px;font-weight:600;padding:4px 12px;cursor:default;white-space:nowrap">${z.stav||'–'}</span></td>
@@ -1686,8 +1701,8 @@ function renderTable() {
             ${z.termin?'<div style="display:flex;justify-content:space-between;gap:20px;padding:2px 0"><span style="opacity:0.7">📆 Zbývá</span><span style="font-weight:700;color:'+(function(){const d=Math.round((new Date(z.termin)-new Date())/(1000*60*60*24));return d<0?'#fca5a5':'#86efac';})()+'">'+( function(){const d=Math.round((new Date(z.termin)-new Date())/(1000*60*60*24));return d<0?'Po termínu '+Math.abs(d)+' dní':'Zbývá '+d+' dní';})()+' </span></div>':''}
           </span>
         </td>
-        <td class="has-tooltip" style="font-size:12px;color:#555;min-width:180px;max-width:260px">${(z.poznamky||'').substring(0,55)}${z.poznamky&&z.poznamky.length>55?'…':''}<span class="tooltip-text">${(z.poznamky||'(žádné poznámky)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
-        <td class="has-tooltip" style="font-size:12px;color:#555;min-width:160px;max-width:220px">${(z.kontakty||'').substring(0,45)}${z.kontakty&&z.kontakty.length>45?'…':''}<span class="tooltip-text">${(z.kontakty||'(žádné kontakty)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
+        <td class="has-tooltip" style="font-size:12px;color:#555;min-width:180px;max-width:260px">${esc((z.poznamky||'').substring(0,55))}${z.poznamky&&z.poznamky.length>55?'…':''}<span class="tooltip-text">${(z.poznamky||'(žádné poznámky)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
+        <td class="has-tooltip" style="font-size:12px;color:#555;min-width:160px;max-width:220px">${esc((z.kontakty||'').substring(0,45))}${z.kontakty&&z.kontakty.length>45?'…':''}<span class="tooltip-text">${(z.kontakty||'(žádné kontakty)').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></td>
         <td style="white-space:nowrap"><div class="row-actions" style="flex-wrap:nowrap;gap:2px">
           ${z.drive_url?`<a href="${extractDriveUrl(z.drive_url)}" target="_blank" class="drive-link-btn" title="Otevřít složku na Google Drive" onclick="event.stopPropagation()">📁</a>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-sm btn-akce" onclick="otevritAkceModal(${idx},'pozadavky');event.stopPropagation()" title="Naplánované akce" style="padding:3px 6px;font-size:11px">📅${(z.akce&&z.akce.length)?` ${z.akce.length}`:''}</button>`:''}
@@ -1711,19 +1726,19 @@ function renderTable() {
       const idx=source.indexOf(z);
       return `<tr data-idx="${idx}" class="${i%2===0?'row-even':''} ${lastEditedIdx===idx&&lastEditedTab===currentTab?'row-last-edited':''}" onclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))vyberRadek(${idx})" ondblclick="if(aktualniRole!=='technik' && !event.target.closest('.row-actions'))editZakazka(${idx})" style="${aktualniRole!=='technik'?'cursor:pointer':''}">
         <td style="color:#888;font-size:11px">${i+1}</td>
-        <td style="font-weight:600;color:#375623">${z.pozadavek||''}</td>
+        <td style="font-weight:600;color:#375623">${esc(z.pozadavek)}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
-        <td style="font-weight:500">${z.adresa||''}</td>
+        <td style="font-weight:500">${esc(z.adresa)}</td>
         <td style="text-align:center">${typBadge(z.typ)}</td>
-        <td style="text-align:center;font-weight:600">${z.byt||''}</td>
-        <td style="max-width:220px">${z.popis||''}</td>
-        <td style="white-space:nowrap">${z.technik||''}</td>
+        <td style="text-align:center;font-weight:600">${esc(z.byt)}</td>
+        <td style="max-width:220px">${esc(z.popis)}</td>
+        <td style="white-space:nowrap">${esc(z.technik)}</td>
         <td style="text-align:right;font-weight:600;color:#555;width:110px;font-size:12px">${z.castka||''}</td>
         <td style="text-align:right;font-weight:700;color:#16a34a;width:110px;font-size:12px">${z.castka_fak||''}</td>
         <td><span class="stav ${getStavClass(z.stav||'Dokončeno')}">${z.stav||'Dokončeno'}</span></td>
         <td style="font-weight:700;color:#1f3864">${z.faktura||''}</td>
         <td style="white-space:nowrap;font-weight:600;color:${z.duzp?'#16a34a':'#c00000'}">${z.duzp?formatDatum(z.duzp):'⚠️ chybí'}</td>
-        <td style="font-size:12px;color:#555;min-width:180px;max-width:240px;white-space:pre-line">${z.kontakty||''}</td>
+        <td style="font-size:12px;color:#555;min-width:180px;max-width:240px;white-space:pre-line">${esc(z.kontakty)}</td>
         <td><div class="row-actions">
           ${z.drive_url?`<a href="${extractDriveUrl(z.drive_url)}" target="_blank" class="drive-link-btn" title="Otevřít složku na Google Drive" onclick="event.stopPropagation()">📁</a>`:''}
           ${aktualniRole!=='technik'?`<button class="btn btn-sm btn-akce" onclick="otevritAkceModal(${idx},'vyfakturovane');event.stopPropagation()" title="Naplánované akce" style="padding:3px 6px;font-size:11px">📅${(z.akce&&z.akce.length)?` ${z.akce.length}`:''}</button>`:''}
@@ -1745,15 +1760,15 @@ function renderTable() {
       const idx=source.indexOf(z);
       return `<tr class="${i%2===0?'row-even':''}" style="opacity:0.85">
         <td style="color:#888;font-size:11px">${i+1}</td>
-        <td style="font-weight:600;color:#991b1b">${z.pozadavek||''}</td>
+        <td style="font-weight:600;color:#991b1b">${esc(z.pozadavek)}</td>
         <td style="white-space:nowrap;color:#666">${formatDatum(z.datum)}</td>
-        <td style="font-weight:500;text-decoration:line-through;color:#999">${z.adresa||''}</td>
-        <td style="text-align:center">${typBadge(z.typ)}</td><td>${z.byt||''}</td>
-        <td style="max-width:180px;color:#888">${z.popis||''}</td>
-        <td>${z.technik||''}</td>
+        <td style="font-weight:500;text-decoration:line-through;color:#999">${esc(z.adresa)}</td>
+        <td style="text-align:center">${typBadge(z.typ)}</td><td>${esc(z.byt)}</td>
+        <td style="max-width:180px;color:#888">${esc(z.popis)}</td>
+        <td>${esc(z.technik)}</td>
         <td style="text-align:right;color:#aaa">${z.castka||''}</td>
         <td style="white-space:nowrap;color:#991b1b;font-weight:600">${z.datum_storna||''}</td>
-        <td style="font-size:12px;color:#991b1b;max-width:160px">${z.duvod_storna||''}</td>
+        <td style="font-size:12px;color:#991b1b;max-width:160px">${esc(z.duvod_storna)}</td>
         <td><div class="row-actions">
           <button class="btn btn-primary btn-sm" onclick="obnovitZakazku(${idx})" title="Obnovit">↩️</button>
           <button class="btn btn-danger btn-sm" onclick="deleteZakazka(${idx})" title="Smazat trvale">🗑️</button>
@@ -1823,11 +1838,14 @@ function ulozitDuzpDoplneni() {
 }
 
 function vyfakturovat(idx) {
-  const z=data.pozadavky[idx];
+  const id=data.pozadavky[idx].id;
+  const z0=data.pozadavky[idx];
   showConfirm(
     '✅ Přesunout na Vyfakturované?',
-    `Zakázka "${z.popis||z.adresa}" (${z.adresa}) bude přesunuta do záložky Vyfakturované.\n\nPokračovat?`,
+    `Zakázka "${z0.popis||z0.adresa}" (${z0.adresa}) bude přesunuta do záložky Vyfakturované.\n\nPokračovat?`,
     ()=>{
+      idx=najdiIdx(data.pozadavky, id); if (idx<0) { zakazkaZmizela(); return; }
+      const z=data.pozadavky[idx];
       z.stav='Dokončeno';
       if (!z.duzp) z.duzp = new Date().toISOString().split('T')[0]; // DUZP = dnešek, pokud nebyl vyplněn
       data.vyfakturovane.push({...z});
@@ -1838,9 +1856,11 @@ function vyfakturovat(idx) {
 }
 
 // ===== STORNO =====
+let stornoId=null;
 function stornovat(idx) {
   stornoIdx=idx;
   const z=data.pozadavky[idx];
+  stornoId=z.id;
   document.getElementById('storno-info').textContent='"'+(z.popis||z.adresa)+'" – '+z.adresa;
   document.getElementById('storno-duvod').value='';
   document.getElementById('storno-modal').classList.add('open');
@@ -1848,6 +1868,7 @@ function stornovat(idx) {
 function closeStornoModal() { document.getElementById('storno-modal').classList.remove('open'); stornoIdx=null; }
 function potvrditStorno() {
   if (stornoIdx===null) return;
+  stornoIdx=najdiIdx(data.pozadavky, stornoId); if (stornoIdx<0) { closeStornoModal(); zakazkaZmizela(); return; }
   const z=data.pozadavky[stornoIdx];
   z.stav='Stornováno';
   z.datum_storna=new Date().toLocaleDateString('cs-CZ');
@@ -1857,8 +1878,10 @@ function potvrditStorno() {
   saveData(); renderTable(); showToast('Zakázka stornována.'); closeStornoModal();
 }
 function obnovitZakazku(idx) {
-  const z=data.stornovane[idx];
-  showConfirm('↩️ Obnovit zakázku?', '"'+(z.popis||z.adresa)+'" bude přesunuta zpět do Požadavků.', ()=>{
+  const z0=data.stornovane[idx], id=z0.id;
+  showConfirm('↩️ Obnovit zakázku?', '"'+(z0.popis||z0.adresa)+'" bude přesunuta zpět do Požadavků.', ()=>{
+    idx=najdiIdx(data.stornovane, id); if (idx<0) { zakazkaZmizela(); return; }
+    const z=data.stornovane[idx];
     z.stav='Nacenit'; z.datum_storna=''; z.duvod_storna='';
     data.pozadavky.push({...z});
     data.stornovane.splice(idx,1);
@@ -1867,11 +1890,13 @@ function obnovitZakazku(idx) {
 }
 
 function vratitDoPozadavku(idx) {
-  const z = data.vyfakturovane[idx];
+  const z0 = data.vyfakturovane[idx], id = z0.id;
   showConfirm(
     '↩️ Vrátit zakázku do Požadavků?',
-    `Zakázka "${z.popis||z.adresa}" (${z.adresa}) bude přesunuta zpět do záložky Požadavky.\n\nFakturační údaje (částka, číslo faktury) zůstanou zachovány. Stav bude nastaven na "K realizaci" - po vrácení můžeš stav upravit přes editaci.\n\nPokračovat?`,
+    `Zakázka "${z0.popis||z0.adresa}" (${z0.adresa}) bude přesunuta zpět do záložky Požadavky.\n\nFakturační údaje (částka, číslo faktury) zůstanou zachovány. Stav bude nastaven na "K realizaci" - po vrácení můžeš stav upravit přes editaci.\n\nPokračovat?`,
     () => {
+      idx = najdiIdx(data.vyfakturovane, id); if (idx < 0) { zakazkaZmizela(); return; }
+      const z = data.vyfakturovane[idx];
       const puvodniStav = z.stav;
       z.stav = 'K realizaci';
       sledovatZmenu(z, `Vrácena z Vyfakturovaných (stav: ${puvodniStav} → K realizaci)`, 'K realizaci');
@@ -1885,6 +1910,7 @@ function vratitDoPozadavku(idx) {
 // ===== MODAL =====
 function openModal(idx=null) {
   editIndex=idx;
+  editId = (idx!==null) ? ((currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane)[idx]||{}).id : null;
   document.getElementById('modal').classList.add('open');
   // Vždy povolit všechna pole (mohla být zakázána z zobrazitDetail)
   document.querySelectorAll('#modal input, #modal select, #modal textarea').forEach(el => {
@@ -1920,7 +1946,12 @@ function openModal(idx=null) {
     document.getElementById('f-typ').value=z.typ||'';
     document.getElementById('f-byt').value=z.byt||'';
     document.getElementById('f-klice').value=z.klice||'';
-    document.getElementById('f-technik').value=z.technik||'';
+    // v3.4: technik, který není v nabídce, se do ní doplní – jinak by se při uložení smazal
+    const tSel = document.getElementById('f-technik');
+    if (z.technik && !Array.from(tSel.options).some(o => o.value === z.technik)) {
+      tSel.insertBefore(new Option(z.technik, z.technik), tSel.querySelector('option[value="__novy__"]'));
+    }
+    tSel.value=z.technik||'';
     document.getElementById('f-popis').value=z.popis||'';
     document.getElementById('f-cn').value=z.cn||'';
     document.getElementById('f-castka').value=z.castka||'';
@@ -2089,7 +2120,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
       <tr><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Termín</td><td style="${hdStyle}">Stav</td></tr>
       ${prosle.map(z => `<tr>
         <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
-        <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+        <td style="${rowStyle}">${esc(z.adresa)}${z.byt?' byt '+z.byt:''}</td>
         <td style="${rowStyle}">${z.technik||'–'}</td>
         <td style="${rowStyle}color:#c00;font-weight:600">${formatDatumEmail(z.termin)}</td>
         <td style="${rowStyle}">${z.stav||'–'}</td>
@@ -2110,7 +2141,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
         return `<tr${p===1?' style="background:#fff5f5"':''}>
           <td style="${rowStyle}text-align:center">${prioCircleHtml(p)}</td>
           <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
-          <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+          <td style="${rowStyle}">${esc(z.adresa)}${z.byt?' byt '+z.byt:''}</td>
           <td style="${rowStyle}">${z.technik||'–'}</td>
           <td style="${rowStyle}color:${isPast?'#c00':'#666'};font-weight:${isPast?'600':'400'}">${z.termin?formatDatumEmail(z.termin):'—'}${isPast?' ⚠️':''}</td>
           <td style="${rowStyle}">${z.stav||'–'}</td>
@@ -2123,7 +2154,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
       <tr><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Termín</td><td style="${hdStyle}">Stav</td></tr>
       ${brzo.map(z => `<tr>
         <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
-        <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+        <td style="${rowStyle}">${esc(z.adresa)}${z.byt?' byt '+z.byt:''}</td>
         <td style="${rowStyle}">${z.technik||'–'}</td>
         <td style="${rowStyle}color:#b45309;font-weight:600">${formatDatumEmail(z.termin)}</td>
         <td style="${rowStyle}">${z.stav||'–'}</td>
@@ -2135,7 +2166,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
       <tr><td style="${hdStyle}">Požadavek</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Technik</td><td style="${hdStyle}">Popis</td><td style="${hdStyle}">Termín</td></tr>
       ${realizaceList.map(z => `<tr style="background:#f0fdf4">
         <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
-        <td style="${rowStyle}">${z.adresa||''}${z.byt?' byt '+z.byt:''}</td>
+        <td style="${rowStyle}">${esc(z.adresa)}${z.byt?' byt '+z.byt:''}</td>
         <td style="${rowStyle}">${z.technik||'–'}</td>
         <td style="${rowStyle}">${z.popis||'–'}</td>
         <td style="${rowStyle}color:#166534;font-weight:600">${z.termin?formatDatumEmail(z.termin):'—'}</td>
@@ -2160,7 +2191,7 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
       <tr><td style="${hdStyle}">Zakázka</td><td style="${hdStyle}">Adresa</td><td style="${hdStyle}">Změna</td><td style="${hdStyle}">Nový stav</td></tr>
       ${zmenySouhrn.map(z => `<tr>
         <td style="${rowStyle}font-weight:600">${z.pozadavek||'–'}</td>
-        <td style="${rowStyle}">${z.adresa||''}</td>
+        <td style="${rowStyle}">${esc(z.adresa)}</td>
         <td style="${rowStyle}color:#666">${z.popis||'–'}</td>
         <td style="${rowStyle}">${z.stav||'–'}</td>
       </tr>`).join('')}
@@ -2358,6 +2389,7 @@ const TECHNICI_DEFAULT = [
   { jmeno: 'Marcela Knížová',  email: 'knizova@brno-lisen.cz' },
   { jmeno: 'Hana Špačková',    email: 'spackova@brno-lisen.cz' },
   { jmeno: 'Nina Vitásková',   email: 'vitaskova.nina@gmail.com' },
+  { jmeno: 'Libuše Imrichová', email: 'imrichova@brno-lisen.cz' },
 ];
 
 function getTechniciAll() {
@@ -2437,11 +2469,14 @@ function nacistExtraTechniky() {
 // ============================================================
 let akceModalIdx = null;
 let akceModalTab = null;
+let akceModalId = null;
 let akceTemp = [];
 
 function otevritAkceZModal() {
   if (editIndex === null) return;
-  otevritAkceModal(editIndex, currentTab);
+  const src = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
+  const i = najdiIdx(src, editId); if (i<0) { zakazkaZmizela(); return; }
+  otevritAkceModal(i, currentTab);
 }
 
 function aktualizujPocetAkci(idx, tab) {
@@ -2457,6 +2492,7 @@ function otevritAkceModal(idx, tab) {
   akceModalTab = tab || currentTab;
   const source = akceModalTab === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
   const z = source[idx];
+  akceModalId = z.id;
   akceTemp = JSON.parse(JSON.stringify(z.akce || []));
   document.getElementById('akce-modal-sub').textContent =
     (z.pozadavek ? 'č. ' + z.pozadavek + ' — ' : '') + (z.adresa || '') + (z.byt ? ', byt ' + z.byt : '');
@@ -2524,6 +2560,7 @@ function ulozitAkce() {
     document.getElementById('akce-new-date').value = '';
   }
   const source = akceModalTab === 'pozadavky' ? data.pozadavky : data.vyfakturovane;
+  akceModalIdx = najdiIdx(source, akceModalId); if (akceModalIdx < 0) { closeAkceModal(); zakazkaZmizela(); return; }
   source[akceModalIdx].akce = JSON.parse(JSON.stringify(akceTemp));
   saveData();
   renderTable();
@@ -2609,7 +2646,8 @@ function saveZakazka() {
     z.priorita = (pv === '1' || pv === '2' || pv === '3') ? parseInt(pv) : null;
   } else if (editIndex !== null) {
     // Neměnit existující prioritu pro non-spravce role
-    const srcPrio = (currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane)[editIndex];
+    const srcP = (currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane);
+    const srcPrio = srcP[najdiIdx(srcP, editId)];
     z.priorita = srcPrio ? (srcPrio.priorita || null) : null;
   } else {
     z.priorita = null;
@@ -2618,11 +2656,17 @@ function saveZakazka() {
   const source = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
   if (editIndex!==null) {
     // Při ukládání existující zakázky - potvrdit
-    const orig = source[editIndex];
+    // v3.4: zakázka se dohledá podle id, ne podle pořadí řádku (kolega mohl mezitím přidat/smazat jinou)
+    const orig = source[najdiIdx(source, editId)];
+    if (!orig) { zakazkaZmizela(); return; }
     showConfirm(
       '💾 Uložit změny?',
       `Uložit změny v zakázce "${orig.popis||orig.adresa}"?`,
-      () => { z.id=orig.id; z.akce=orig.akce||[]; z.histoire=orig.histoire||[]; source[editIndex]=z; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
+      () => {
+        const src = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
+        const i = najdiIdx(src, editId); if (i<0) { zakazkaZmizela(); return; }
+        const akt = src[i];
+        z.id=akt.id; z.akce=akt.akce||[]; z.histoire=akt.histoire||[]; src[i]=z; lastEditedIdx=i; saveData(); modalZmeneno=false; document.getElementById('modal').classList.remove('open'); editIndex=null; renderTable(); showToast('✅ Zakázka uložena!',true); zvyraznitPosledniRadek(); }
     );
   } else {
     data.pozadavky.push(z);
@@ -2633,11 +2677,15 @@ function saveZakazka() {
 
 function deleteZakazka(idx) {
   const source = currentTab==='pozadavky'?data.pozadavky:currentTab==='vyfakturovane'?data.vyfakturovane:data.stornovane;
-  const z=source[idx];
+  const z=source[idx], id=z.id, tab=currentTab;
   showConfirm(
     '🗑️ Smazat zakázku?',
     `Opravdu chcete trvale smazat zakázku:\n"${z.popis||z.adresa}" (${z.adresa})?\n\nTato akce je nevratná!`,
-    () => { source.splice(idx,1); saveData(); renderTable(); showToast('Zakázka smazána.'); },
+    () => {
+      const src = tab==='pozadavky'?data.pozadavky:tab==='vyfakturovane'?data.vyfakturovane:data.stornovane;
+      const i = najdiIdx(src, id); if (i<0) { zakazkaZmizela(); return; }
+      src.splice(i,1); saveData(); renderTable(); showToast('Zakázka smazána.');
+    },
     true
   );
 }
@@ -2645,6 +2693,7 @@ function deleteZakazka(idx) {
 // ===== PROTOKOL =====
 let protoZakazkaIdx = null;       // index zakázky otevřené v protokolu
 let protoZakazkaTab = null;       // 'pozadavky' / 'vyfakturovane'
+let protoZakazkaId = null;        // v3.4: id zakázky v protokolu
 function parseCzDatum(txt) {      // "12. 6. 2026" / "12.06.2026" -> "2026-06-12" (jinak null)
   if (!txt) return null;
   const m = String(txt).trim().match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/);
@@ -2655,6 +2704,7 @@ function otevritProtokol(idx) {
   const source = currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
   const z=source[idx];
   protoZakazkaIdx = idx;
+  protoZakazkaId = z.id;
   protoZakazkaTab = currentTab==='pozadavky' ? 'pozadavky' : 'vyfakturovane';
   const dnes = z.duzp ? new Date(z.duzp).toLocaleDateString('cs-CZ') : new Date().toLocaleDateString('cs-CZ');
   const splatDate=new Date(); splatDate.setDate(splatDate.getDate()+14);
@@ -2689,7 +2739,7 @@ function otevritProtokol(idx) {
   document.getElementById('fak-grid').innerHTML=`
     <div class="fak-item"><div class="fl">Požadavek č.</div><div class="fv">${z.pozadavek||'–'}</div></div>
     <div class="fak-item"><div class="fl">Objednávka č.</div><div class="fv">${z.objednavka||'–'}${z.datum_obj?'<br><span style="font-size:11px;color:#888;font-weight:400">ze dne '+formatDatum(z.datum_obj)+'</span>':''}</div></div>
-    <div class="fak-item full"><div class="fl">Adresa</div><div class="fv">${z.adresa||''}${z.byt?', byt č. '+z.byt:''}</div></div>
+    <div class="fak-item full"><div class="fl">Adresa</div><div class="fv">${esc(z.adresa)}${z.byt?', byt č. '+z.byt:''}</div></div>
     <div class="fak-item full"><div class="fl">Popis práce</div><div class="fv">${z.popis||'–'}</div></div>
     <div class="fak-item"><div class="fl">Technik</div><div class="fv">${z.technik||'–'}</div></div>
     <div class="fak-item"><div class="fl">Faktura OPUS</div><div class="fv">${z.faktura||'– (doplnit)'}</div></div>
@@ -2835,12 +2885,12 @@ function tiskHlavni() {
   const tabNazev=currentTab==='pozadavky'?'Požadavky':'Vyfakturované';
   const radky=rows.map((z,i)=>`<tr style="${i%2===0?'background:#f5f5f5;-webkit-print-color-adjust:exact;print-color-adjust:exact':''}">
     <td style="padding:4px 5px;color:#888">${i+1}</td>
-    <td style="padding:4px 5px;font-weight:600;color:#1f3864">${z.pozadavek||''}</td>
+    <td style="padding:4px 5px;font-weight:600;color:#1f3864">${esc(z.pozadavek)}</td>
     <td style="padding:4px 5px;white-space:nowrap">${formatDatum(z.datum)}</td>
-    <td style="padding:4px 5px;font-weight:500">${z.adresa||''}${z.byt?'<br><span style="color:#888;font-size:9px">byt č.'+z.byt+'</span>':''}</td>
+    <td style="padding:4px 5px;font-weight:500">${esc(z.adresa)}${z.byt?'<br><span style="color:#888;font-size:9px">byt č.'+z.byt+'</span>':''}</td>
     <td style="padding:4px 5px;text-align:center">${typBadge(z.typ,{fontSize:'9px',pad:'1px 5px',maxWidth:'70px',print:true})}</td>
-    <td style="padding:4px 5px">${z.popis||''}</td>
-    <td style="padding:4px 5px;white-space:nowrap">${z.technik||''}</td>
+    <td style="padding:4px 5px">${esc(z.popis)}</td>
+    <td style="padding:4px 5px;white-space:nowrap">${esc(z.technik)}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap;color:#16a34a;font-weight:600">${z.castka_fak||''}</td>
     <td style="padding:4px 5px"><span style="padding:2px 6px;border-radius:10px;font-size:9px;font-weight:600;background:${stavPrintColors(z.stav).bg};color:${stavPrintColors(z.stav).fg};-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
@@ -2924,7 +2974,7 @@ function tiskZakazky() {
     </div>
     <div class="logo"><img src="data:image/png;base64,${document.querySelector('img[alt="OPUS BUILD"]').src.split(',')[1]}" alt="OPUS BUILD"></div>
   </div>
-  <h1>Detail zakázky – ${z.adresa||''}${z.byt?', byt č. '+z.byt:''}</h1>
+  <h1>Detail zakázky – ${esc(z.adresa)}${z.byt?', byt č. '+z.byt:''}</h1>
   <div class="grid" style="border:1px solid #ddd;border-radius:4px;overflow:hidden">
     <div class="sec">📋 IDENTIFIKACE ZAKÁZKY</div>
     <div class="item"><div class="lbl">Požadavek č.</div><div class="val">${z.pozadavek||'–'}</div></div>
@@ -2961,15 +3011,8 @@ function tiskZakazky() {
 }
 
 function tiskProtokol() {
-  // Ulož datum přejímacího řízení (skončeno dne) jako DUZP zakázky
-  try {
-    if (protoZakazkaIdx !== null && protoZakazkaTab) {
-      const src = protoZakazkaTab==='pozadavky' ? data.pozadavky : data.vyfakturovane;
-      const zk = src[protoZakazkaIdx];
-      const iso = parseCzDatum(document.getElementById('p-datum2').textContent);
-      if (zk && iso && zk.duzp !== iso) { zk.duzp = iso; saveData(); }
-    }
-  } catch(e) { console.warn('DUZP z protokolu se nepodařilo uložit:', e); }
+  // v3.4: DUZP se už neukládá automaticky při tisku (dřív se zapsalo i u nedokončené zakázky
+  // a i když tisk selhal). Po úspěšném otevření tisku se aplikace zeptá – viz nabidnoutDuzpZProtokolu().
   const podpis = localStorage.getItem('opus_podpis') || '';
   const razitko = localStorage.getItem('opus_razitko') || '';
   // Vezmi obsah protokolu a nahraď placeholder obrázky skutečnými
@@ -2990,6 +3033,7 @@ function tiskProtokol() {
   html = html.replace(/(<img[^>]*id="podpis-img"[^>]*)(style="[^"]*display:none[^"]*")/gi, podpis ? '$1style="max-height:56px;max-width:100%;object-fit:contain"' : '$1style="display:none"');
   html = html.replace(/(<img[^>]*id="razitko-img"[^>]*)(style="[^"]*display:none[^"]*")/gi, razitko ? '$1style="width:65px;height:65px;object-fit:contain;opacity:0.85"' : '$1style="display:none"');
   const win=window.open('','_blank','width=900,height=700');
+  if (!win) { showToast('⚠️ Prohlížeč zablokoval okno pro tisk. Povolte vyskakovací okna pro tuto stránku a zkuste to znovu.'); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Protokol</title>
   <style>
   @page{margin:10mm}
@@ -3015,6 +3059,25 @@ function tiskProtokol() {
   </style></head><body>${html}</body></html>`);
   win.document.close();
   setTimeout(()=>win.print(),500);
+  nabidnoutDuzpZProtokolu();
+}
+
+// v3.4: datum „skončeno dne“ z protokolu se jako DUZP uloží jen po výslovném potvrzení
+function nabidnoutDuzpZProtokolu() {
+  if (protoZakazkaId === null || !protoZakazkaTab || aktualniRole === 'technik') return;
+  const src = protoZakazkaTab==='pozadavky' ? data.pozadavky : data.vyfakturovane;
+  const zk = src[najdiIdx(src, protoZakazkaId)];
+  const iso = parseCzDatum(document.getElementById('p-datum2').textContent);
+  if (!zk || !iso || zk.duzp === iso) return;
+  showConfirm(
+    '📅 Uložit datum předání jako DUZP?',
+    `Zakázka „${zk.popis||zk.adresa}“ (${zk.adresa})\nStav: ${zk.stav||'–'} · současné DUZP: ${zk.duzp?formatDatum(zk.duzp):'nevyplněno'}\n\nUložit ${formatDatum(iso)} jako DUZP (od něj běží záruka a podle něj se počítá výkaz)?\nPotvrďte jen u skutečně předané zakázky.`,
+    () => {
+      const s2 = protoZakazkaTab==='pozadavky' ? data.pozadavky : data.vyfakturovane;
+      const z2 = s2[najdiIdx(s2, protoZakazkaId)]; if (!z2) { zakazkaZmizela(); return; }
+      z2.duzp = iso; saveData(); renderTable(); showToast('✅ DUZP uloženo: ' + formatDatum(iso), true);
+    }
+  );
 }
 
 function tiskFaktura() {
@@ -3105,19 +3168,19 @@ function tiskTabulky() {
   const tabNazev=currentTab==='pozadavky'?'Požadavky':'Vyfakturované';
   const radky=rows.map((z,i)=>`<tr style="${i%2===0?'background:#f5f5f5;-webkit-print-color-adjust:exact;print-color-adjust:exact':''}">
     <td style="padding:4px 5px">${i+1}</td>
-    <td style="padding:4px 5px;font-weight:600">${z.pozadavek||''}</td>
+    <td style="padding:4px 5px;font-weight:600">${esc(z.pozadavek)}</td>
     <td style="padding:4px 5px;white-space:nowrap">${formatDatum(z.datum)}</td>
-    <td style="padding:4px 5px">${z.adresa||''}${z.byt?', č.'+z.byt:''}</td>
+    <td style="padding:4px 5px">${esc(z.adresa)}${z.byt?', č.'+z.byt:''}</td>
     <td style="padding:4px 5px;text-align:center">${typBadge(z.typ,{fontSize:'9px',pad:'1px 5px',maxWidth:'70px',print:true})}</td>
-    <td style="padding:4px 5px">${z.popis||''}</td>
-    <td style="padding:4px 5px;white-space:nowrap">${z.technik||''}</td>
+    <td style="padding:4px 5px">${esc(z.popis)}</td>
+    <td style="padding:4px 5px;white-space:nowrap">${esc(z.technik)}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap">${z.castka||''}</td>
     <td style="padding:4px 5px;text-align:right;white-space:nowrap;color:#16a34a;font-weight:600">${z.castka_fak||''}</td>
     <td style="padding:4px 5px"><span style="padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;background:${stavPrintColors(z.stav).bg};color:${stavPrintColors(z.stav).fg};-webkit-print-color-adjust:exact;print-color-adjust:exact">${z.stav||''}</span></td>
     <td style="padding:4px 5px;white-space:nowrap;color:${isTerminPast(z.termin)?'#c00000':'#333'}">${formatDatum(z.termin)}</td>
     ${currentTab==='vyfakturovane'?`<td style="padding:4px 5px;white-space:nowrap;color:#16a34a;font-weight:600">${formatDatum(z.duzp)||'–'}</td>`:''}
-    <td style="padding:4px 5px;font-size:9px;color:#555">${z.poznamky||''}</td>
-    <td style="padding:4px 5px;font-size:9px;color:#555">${z.kontakty||''}</td>
+    <td style="padding:4px 5px;font-size:9px;color:#555">${esc(z.poznamky)}</td>
+    <td style="padding:4px 5px;font-size:9px;color:#555">${esc(z.kontakty)}</td>
   </tr>`).join('');
 
   const win=window.open('','_blank','width=1200,height=800');
@@ -3164,28 +3227,25 @@ function tiskTabulky() {
   setTimeout(()=>win.print(),500);
 }
 
+// v3.4: Export Excel = VŽDY celá evidence (Požadavky + Vyfakturované + Stornované), bez ohledu na filtr
+// a otevřenou záložku. Vyfiltrovaný výběr řeší tlačítko „Tisk filtrace“.
 function exportExcel() {
-  const search=document.getElementById('search').value.toLowerCase();
-  const filterStav=document.getElementById('filter-stav').value;
-  const filterTechnik=document.getElementById('filter-technik').value;
-  const source=currentTab==='pozadavky'?data.pozadavky:data.vyfakturovane;
-  const rows=source.filter(z=>{
-    const text=[z.adresa,z.popis,z.technik,z.pozadavek].join(' ').toLowerCase();
-    if (search&&!text.includes(search)) return false;
-    if (filterStav&&z.stav!==filterStav) return false;
-    if (filterTechnik&&z.technik!==filterTechnik) return false;
-    return true;
-  });
-  const h=['#','Požadavek','Ze dne','Objednávka','Adresa','Typ','Byt','Popis práce','Technik','Cena CN','Fakt. částka','Faktura','Stav','Termín','DUZP','Poznámky','Kontakty'];
-  const r=rows.map((z,i)=>[i+1,z.pozadavek||'',formatDatum(z.datum),z.objednavka||'',z.adresa||'',z.typ||'',z.byt||'',z.popis||'',z.technik||'',z.castka||'',z.castka_fak||'',z.faktura||'',z.stav||'',formatDatum(z.termin),formatDatum(z.duzp),z.poznamky||'',z.kontakty||'']);
+  const seznamy=[['Požadavky',data.pozadavky||[]],['Vyfakturované',data.vyfakturovane||[]],['Stornované',data.stornovane||[]]];
+  const h=['#','Záložka','Požadavek','Ze dne','Zadáno do systému','Objednávka','Datum objednávky','Adresa','Typ','Byt','Klíče','Popis práce','Technik','CN odeslána','Cena CN','Fakt. částka','Faktura','Stav','Priorita','Termín','DUZP','Co dál','Poznámky','Kontakty','Stornováno dne','Důvod storna','Odkaz na složku','Počet akcí'];
+  let n=0;
+  const r=[];
+  seznamy.forEach(([nazev,seznam])=>seznam.forEach(z=>{
+    r.push([++n,nazev,z.pozadavek,formatDatum(z.datum),formatDatum(z.datum_zadani),z.objednavka,formatDatum(z.datum_obj),z.adresa,z.typ,z.byt,z.klice,z.popis,z.technik,z.cn,z.castka,z.castka_fak,z.faktura,z.stav,z.priorita?('P'+z.priorita):'',formatDatum(z.termin),formatDatum(z.duzp),z.codal,z.poznamky,z.kontakty,z.datum_storna,z.duvod_storna,z.drive_url,(z.akce||[]).length||'']);
+  }));
   const tbl=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>
   <table><tr>${h.map(hh=>`<td style="background:#1f3864;color:white;font-weight:bold">${hh}</td>`).join('')}</tr>
-  ${r.map((row,i)=>`<tr style="background:${i%2===0?'#fafbff':'white'}">${row.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}
+  ${r.map((row,i)=>`<tr style="background:${i%2===0?'#fafbff':'white'}">${row.map(v=>`<td style="mso-number-format:'\\@';vertical-align:top">${esc(v).replace(/\n/g,'<br style="mso-data-placement:same-cell">')}</td>`).join('')}</tr>`).join('')}
   </table>`;
   const blob=new Blob(['\ufeff'+tbl],{type:'application/vnd.ms-excel;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='evidence_zakazek_'+new Date().toISOString().split('T')[0]+'.xls';a.click();
-  showToast('📊 Excel exportován!',true);
+  const ted=new Date(); const cas=ted.toISOString().split('T')[0]+'_'+String(ted.getHours()).padStart(2,'0')+String(ted.getMinutes()).padStart(2,'0');
+  a.download='evidence_zakazek_VSE_'+cas+'.xls';a.click();
+  showToast(`📊 Excel exportován – celá evidence: ${data.pozadavky.length} požadavků, ${data.vyfakturovane.length} vyfakturovaných, ${(data.stornovane||[]).length} stornovaných`,true);
 }
 
 // ===== DIALOGY =====
@@ -3812,7 +3872,7 @@ function renderKalendar() {
         const onClick = idx >= 0 ? `editZakazka(${idx})` : vIdx >= 0 ? `editZakazka(${vIdx})` : '';
         const p = prioNum(z);
         const prefix = p ? `<span style="display:inline-block;width:12px;height:12px;line-height:12px;text-align:center;border-radius:50%;background:${p===1?'#A32D2D':p===2?'#854F0B':'#0C447C'};color:#fff;font-weight:700;font-size:9px;margin-right:3px;vertical-align:middle">${p}</span>` : '';
-        return `<div class="kal-ev ${cls}" style="border-left:3px solid ${typBarva(z.typ).fg}" onclick="${onClick}" title="${p?'⭐ Priorita P'+p+' · ':''}${z.typ?z.typ+' · ':''}${z.adresa} – ${z.popis||''}">${prefix}${z.adresa||z.popis||'–'}</div>`;
+        return `<div class="kal-ev ${cls}" style="border-left:3px solid ${typBarva(z.typ).fg}" onclick="${onClick}" title="${p?'⭐ Priorita P'+p+' · ':''}${z.typ?z.typ+' · ':''}${z.adresa} – ${esc(z.popis)}">${prefix}${z.adresa||z.popis||'–'}</div>`;
       }).join('')}
     </div>`;
   }
@@ -3974,11 +4034,11 @@ function renderVykazTable() {
         <thead><tr><th>#</th><th>Požadavek</th><th>DUZP</th><th>Adresa</th><th>Popis</th><th>Technik</th><th>Faktura č.</th><th style="text-align:right">CN</th><th style="text-align:right">Fakturováno</th></tr></thead>
         <tbody>${rows.map((z,i) => `<tr class="${i%2===0?'row-even':''}">
           <td style="color:#888;font-size:11px">${i+1}</td>
-          <td style="font-weight:600;color:#375623">${z.pozadavek||''}</td>
+          <td style="font-weight:600;color:#375623">${esc(z.pozadavek)}</td>
           <td style="white-space:nowrap;color:#16a34a;font-weight:600">${formatDatum(z.duzp)}</td>
-          <td>${z.adresa||''}</td>
+          <td>${esc(z.adresa)}</td>
           <td style="max-width:200px">${z.popis||z.klice||''}</td>
-          <td>${z.technik||''}</td>
+          <td>${esc(z.technik)}</td>
           <td style="font-weight:700;color:#1f3864">${z.faktura||'–'}</td>
           <td style="text-align:right;color:#555">${z.castka||''}</td>
           <td style="text-align:right;font-weight:700;color:#16a34a">${z.castka_fak||''}</td>
@@ -4012,7 +4072,7 @@ function tiskVykaz() {
     <div style="font-size:9px;color:#888">Vytištěno: ${new Date().toLocaleDateString('cs-CZ')}</div>
   </div>
   <table><thead><tr><th>#</th><th>Požadavek</th><th>Datum</th><th>Adresa</th><th>Popis</th><th>Technik</th><th>Faktura</th><th style="text-align:right">CN</th><th style="text-align:right">Fakturováno</th></tr></thead>
-  <tbody>${rows.map((z,i) => `<tr><td style="color:#888">${i+1}</td><td style="font-weight:600;color:#375623">${z.pozadavek||''}</td><td style="white-space:nowrap">${formatDatum(z.datum)}</td><td>${z.adresa||''}</td><td>${z.popis||z.klice||''}</td><td>${z.technik||''}</td><td style="font-weight:700">${z.faktura||'–'}</td><td style="text-align:right">${z.castka||''}</td><td style="text-align:right;font-weight:700;color:#16a34a">${z.castka_fak||''}</td></tr>`).join('')}</tbody>
+  <tbody>${rows.map((z,i) => `<tr><td style="color:#888">${i+1}</td><td style="font-weight:600;color:#375623">${esc(z.pozadavek)}</td><td style="white-space:nowrap">${formatDatum(z.datum)}</td><td>${esc(z.adresa)}</td><td>${z.popis||z.klice||''}</td><td>${esc(z.technik)}</td><td style="font-weight:700">${z.faktura||'–'}</td><td style="text-align:right">${z.castka||''}</td><td style="text-align:right;font-weight:700;color:#16a34a">${z.castka_fak||''}</td></tr>`).join('')}</tbody>
   <tfoot><tr style="background:#e8f5e9;-webkit-print-color-adjust:exact"><td colspan="7" style="font-weight:700;text-align:right;padding:8px">CELKEM:</td><td></td><td style="text-align:right;font-weight:700;font-size:13px;color:#16a34a">${formatCastkaTxt(total)}</td></tr></tfoot>
   </table></body></html>`);
   win.document.close(); setTimeout(() => win.print(), 500);
