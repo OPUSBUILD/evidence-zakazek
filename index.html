@@ -653,6 +653,8 @@ body.prihlasen #main-obsah { display: block; }
       <option>Hana Špačková</option>
       <option>Nina Vitásková</option>
       <option>Libuše Imrichová</option>
+      <option>David Linger</option>
+      <option>Oldřich Dryšl</option>
       <div id="f-technik-extra-options"></div>
       <option value="__novy__">+ Přidat nového technika...</option>
      </select>
@@ -921,7 +923,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v3.5';
+const APP_VERSION = 'v3.6';
 // Nastav verzi v záhlaví hned po načtení DOM (ať se nehardcoduje placeholder)
 document.addEventListener('DOMContentLoaded', () => {
   const ls = document.getElementById('last-save');
@@ -2390,6 +2392,8 @@ const TECHNICI_DEFAULT = [
   { jmeno: 'Hana Špačková',    email: 'spackova@brno-lisen.cz' },
   { jmeno: 'Nina Vitásková',   email: 'vitaskova.nina@gmail.com' },
   { jmeno: 'Libuše Imrichová', email: 'imrichova@brno-lisen.cz' },
+  { jmeno: 'David Linger',     email: 'linger@brno-lisen.cz' },
+  { jmeno: 'Oldřich Dryšl',    email: 'drysl@brno-lisen.cz' },
 ];
 
 function getTechniciAll() {
