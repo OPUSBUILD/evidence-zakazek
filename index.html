@@ -546,7 +546,7 @@ body.prihlasen #main-obsah { display: block; }
   <select id="filter-typ" onchange="renderTable()">
     <option value="">Všechny typy</option>
     <option>PODESTA BALKÓNU</option><option>BYT</option><option>KOUPELNA</option><option>MALBY</option><option>OPRAVA SCHODIŠTĚ</option>
-    <option>PODLAHY VÝMĚNA</option><option>SPOLEČNÉ PROSTORY</option><option>VÝPLNĚ OTVORŮ</option><option>ZATÉKÁNÍ</option><option>JINÉ OSTATNÍ</option>
+    <option>PODLAHY VÝMĚNA</option><option>SPOLEČNÉ PROSTORY</option><option>STŘEŠNÍ OKNO</option><option>VÝPLNĚ OTVORŮ</option><option>ZATÉKÁNÍ</option><option>JINÉ OSTATNÍ</option>
   </select>
   <select id="filter-technik" onchange="renderTable()"><option value="">Všichni technici</option></select>
   <select id="filter-adresa" onchange="renderTable()" style="min-width:140px"><option value="">Všechny adresy</option></select>
@@ -641,7 +641,7 @@ body.prihlasen #main-obsah { display: block; }
    <div class="form-section">📍 Lokalita</div>
    <div class="form-group span2"><label>Adresa</label><input id="f-adresa" placeholder="např. Molákova 1"></div>
    <div class="form-group"><label>Typ</label>
-    <select id="f-typ"><option value="">- vyberte -</option><option>PODESTA BALKÓNU</option><option>BYT</option><option>KOUPELNA</option><option>MALBY</option><option>OPRAVA SCHODIŠTĚ</option><option>PODLAHY VÝMĚNA</option><option>SPOLEČNÉ PROSTORY</option><option>VÝPLNĚ OTVORŮ</option><option>ZATÉKÁNÍ</option><option>JINÉ OSTATNÍ</option></select>
+    <select id="f-typ"><option value="">- vyberte -</option><option>PODESTA BALKÓNU</option><option>BYT</option><option>KOUPELNA</option><option>MALBY</option><option>OPRAVA SCHODIŠTĚ</option><option>PODLAHY VÝMĚNA</option><option>SPOLEČNÉ PROSTORY</option><option>STŘEŠNÍ OKNO</option><option>VÝPLNĚ OTVORŮ</option><option>ZATÉKÁNÍ</option><option>JINÉ OSTATNÍ</option></select>
    </div>
    <div class="form-group"><label>Byt / č.</label><input id="f-byt" placeholder="např. 36"></div>
    <div class="form-section">🔧 Realizace</div>
@@ -923,7 +923,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v3.6';
+const APP_VERSION = 'v3.7';
 // Nastav verzi v záhlaví hned po načtení DOM (ať se nehardcoduje placeholder)
 document.addEventListener('DOMContentLoaded', () => {
   const ls = document.getElementById('last-save');
@@ -1167,6 +1167,8 @@ function odhadniTyp(popisRaw) {
   if (p.includes('výmalb') || p.includes('vymalb') || p.includes('malb') || p.includes('nátěr') || p.includes('nater')) return 'MALBY';
   if (p.includes('schodišt') || p.includes('schodist') || p.includes('schodnic') || p.includes('schod')) return 'OPRAVA SCHODIŠTĚ';
   if (p.includes('podest') || p.includes('balkón') || p.includes('balkon')) return 'PODESTA BALKÓNU';
+  // v3.7: střešní okno má přednost i před zatékáním („Střešní okno – zatékání“ = STŘEŠNÍ OKNO)
+  if (p.includes('střešní okn') || p.includes('stresni okn') || p.includes('střešního okn') || p.includes('stresniho okn') || p.includes('střešních oken') || p.includes('stresnich oken') || p.includes('velux')) return 'STŘEŠNÍ OKNO';
   if (p.includes('zaték') || p.includes('zatek') || p.includes('zateč') || p.includes('zatec')) return 'ZATÉKÁNÍ';
   if (p.includes('podlah') || p.includes('parket') || p.includes('vinyl') || p.includes('linole')) return 'PODLAHY VÝMĚNA';
   if (p.includes('společn') || p.includes('spolec') || p.includes('chodb')) return 'SPOLEČNÉ PROSTORY';
@@ -3349,6 +3351,7 @@ const TYP_BARVY = {
   'OPRAVA SCHODIŠTĚ': { bg:'#EEEDFE', fg:'#3C3489' },
   'PODLAHY VÝMĚNA':   { bg:'#EAF3DE', fg:'#3B6D11' },
   'SPOLEČNÉ PROSTORY':{ bg:'#F1EFE8', fg:'#444441' },
+  'STŘEŠNÍ OKNO':     { bg:'#E0F1F6', fg:'#0B5A70' },
   'VÝPLNĚ OTVORŮ':    { bg:'#EAEDF2', fg:'#3D4759' },
   'ZATÉKÁNÍ':         { bg:'#EAEDF2', fg:'#3D4759' },
   'JINÉ OSTATNÍ':     { bg:'#EAEDF2', fg:'#3D4759' }
