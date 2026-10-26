@@ -923,7 +923,7 @@ body.prihlasen #main-obsah { display: block; }
 <script>
 
 // === VERZE APLIKACE === (inkrementovat o 0.1 při každé aktualizaci)
-const APP_VERSION = 'v3.7';
+const APP_VERSION = 'v3.8';
 // Nastav verzi v záhlaví hned po načtení DOM (ať se nehardcoduje placeholder)
 document.addEventListener('DOMContentLoaded', () => {
   const ls = document.getElementById('last-save');
@@ -1198,10 +1198,12 @@ function loadData() {
     document.getElementById('last-save').textContent = '☁️ Načteno: ' + new Date().toLocaleTimeString('cs-CZ') + ' · ' + APP_VERSION;
     setTimeout(zkontrolujProsleTerm, 1200);
     // Auto-odeslání denního souhrnu (jen jednou denně, jen pro správce/přípravu)
+    // v3.8: „dnes už odesláno“ hlídá sdílené pole souhrn_odeslano ve Firestore (odeslатDenniSouhrn) – dřív jen localStorage
+    // tohoto zařízení, takže souhrn poslalo každé zařízení zvlášť (Petr 26. 10. 2026: „ať chodí jednou“)
     setTimeout(() => {
       if (aktualniRole === 'spravce' || aktualniRole === 'priprava') {
-        const dnes = new Date().toISOString().split('T')[0];
-        if (!localStorage.getItem('opus_souhrn_odeslano_' + dnes)) {
+        const dnes = new Date().toLocaleDateString('sv-SE'); // místní datum RRRR-MM-DD (toISOString je UTC)
+        if (!localStorage.getItem('opus_souhrn_odeslano_' + dnes) && data.souhrn_odeslano !== dnes) {
           odeslатDenniSouhrn(false);
         }
       }
@@ -2307,15 +2309,38 @@ function sestavHtmlSouhrn(zakazky, vyfakturovane) {
 `;
 }
 
+// v3.8: zabere den ve sdílených datech (transakce na zakazky/data) – vrátí true jen prvnímu zařízení dne
+async function zabratDenniSouhrn_(dnes) {
+  if (dataZeZalohy) return false; // bez cloudu nic neposílat (nevíme, jestli už neodešel)
+  const ref = db.collection('zakazky').doc('data');
+  return db.runTransaction(async t => {
+    const doc = await t.get(ref);
+    if (!doc.exists) return false;
+    if (doc.data().souhrn_odeslano === dnes) return false;
+    t.update(ref, { souhrn_odeslano: dnes, souhrn_cas: new Date().toISOString(), souhrn_kdo: aktualniRole || '' });
+    return true;
+  });
+}
+
 async function odeslатDenniSouhrn(manual = false) {
+  let zabrano = false;
+  const dnes = new Date().toLocaleDateString('sv-SE'); // místní datum RRRR-MM-DD
   try {
-    const dnes = new Date().toISOString().split('T')[0];
     const klic = 'opus_souhrn_odeslano_' + dnes;
 
-    // Nepošli dvakrát za den (pokud není manuální)
-    if (!manual && localStorage.getItem(klic)) {
-      console.log('Denní souhrn již odeslán dnes.');
-      return;
+    // Nepošli dvakrát za den (pokud není manuální) – v3.8: rozhoduje sdílené pole ve Firestore, ne jen toto zařízení
+    if (!manual) {
+      if (localStorage.getItem(klic)) {
+        console.log('Denní souhrn již odeslán dnes (toto zařízení).');
+        return;
+      }
+      zabrano = await zabratDenniSouhrn_(dnes);
+      if (!zabrano) {
+        localStorage.setItem(klic, '1');
+        console.log('Denní souhrn dnes už odeslalo jiné zařízení – neposílám.');
+        return;
+      }
+      data.souhrn_odeslano = dnes; // ať ho další saveData() z tohoto zařízení nepřepíše starou hodnotou
     }
 
     const html = sestavHtmlSouhrn(data.pozadavky || [], data.vyfakturovane || []);
@@ -2352,6 +2377,10 @@ async function odeslатDenniSouhrn(manual = false) {
     console.log('Denní souhrn odeslán!');
   } catch(err) {
     console.error('Chyba při odesílání souhrnu:', err);
+    // v3.8: odeslání selhalo → uvolni den, ať to zkusí další otevření aplikace
+    if (zabrano) {
+      try { await db.collection('zakazky').doc('data').update({ souhrn_odeslano: firebase.firestore.FieldValue.delete() }); delete data.souhrn_odeslano; } catch (e) { console.warn('Uvolnění souhrnu selhalo:', e.message); }
+    }
     if (manual) showToast('❌ Chyba při odesílání: ' + (err.text || err.message || JSON.stringify(err)), false);
   }
 }
